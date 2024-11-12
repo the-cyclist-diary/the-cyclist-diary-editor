@@ -1,0 +1,9 @@
+name: 'The cyclist diary article generator'
+description: 'Transform a GitHub issue into a nice article'
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: false
+runs:
+  using: 'docker'
+  image: 'docker://ghcr.io/the-cyclist-diary/the-cyclist-diary-editor:main'
