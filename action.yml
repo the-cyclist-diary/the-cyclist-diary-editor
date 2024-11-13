@@ -4,6 +4,9 @@ inputs:
   github-token:
     description: 'GitHub token'
     required: true
+  github-username:
+    description: 'Github username'
+    required: true
   action:
     description: 'Name of the action (if named)'
     required: false
