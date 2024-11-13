@@ -26,7 +26,7 @@ public class GenerateArticle {
     private static final String ARTICLE = "article";
 
     @Action
-    void action(Commands commands, Context context, Inputs inputs, @Issue.Opened GHEventPayload.Issue issuePayload) throws IOException, GitAPIException {
+    void action(Commands commands, Context context, Inputs inputs, @Issue GHEventPayload.Issue issuePayload) throws IOException, GitAPIException {
         commands.notice("Traitement de l'issue...");
         GHIssue issue = issuePayload.getIssue();
         if (issue.getLabels().stream().map(GHLabel::getName).anyMatch(ARTICLE::equals)) {
