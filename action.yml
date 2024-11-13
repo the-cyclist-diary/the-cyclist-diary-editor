@@ -40,7 +40,7 @@ runs:
       uses: jbangdev/setup-jbang@main
     - name: Run the action
       id: action
-      run: jbang --java 21 --fresh --repos 'quarkus-github-action=https://maven.pkg.github.com/the-cyclist-diary/the-cyclist-diary-editor/' --repos 'mavencentral' com.github.thecyclistdiary:the-cyclist-diary-editor:1.0.0-SNAPSHOT
+      run: jbang --java 21 --fresh --verbose --repos 'quarkus-github-action=https://maven.pkg.github.com/the-cyclist-diary/the-cyclist-diary-editor/' --repos 'mavencentral' com.github.thecyclistdiary:the-cyclist-diary-editor:1.0.0-SNAPSHOT
       shell: bash
       env:
         JSON_INPUTS: ${{ toJSON(inputs) }}
