@@ -13,6 +13,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.kohsuke.github.GHEventPayload;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueStateReason;
+import org.kohsuke.github.GHLabel;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,12 +23,14 @@ import java.util.stream.Stream;
 
 public class GenerateArticle {
 
+    private static final String ARTICLE = "article";
+
     @Action
     void action(Commands commands, Context context, Inputs inputs, @Issue.Opened GHEventPayload.Issue issuePayload) throws IOException, GitAPIException {
-        commands.notice("Starting to parse the issue...");
-        if ("article".equals(issuePayload.getLabel().getName())) {
-            commands.notice("The issue is an article, proceeding...");
-            GHIssue issue = issuePayload.getIssue();
+        commands.notice("Traitement de l'issue...");
+        GHIssue issue = issuePayload.getIssue();
+        if (issue.getLabels().stream().map(GHLabel::getName).anyMatch(ARTICLE::equals)) {
+            commands.notice("L'issue est bien un article, parsing...");
             String token = inputs.getRequired("github-token");
             String username = inputs.getRequired("github-username");
             Article article = ArticleParser.parse(issue);
