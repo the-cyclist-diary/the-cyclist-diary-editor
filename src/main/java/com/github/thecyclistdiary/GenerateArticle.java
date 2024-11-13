@@ -41,7 +41,7 @@ public class GenerateArticle {
                     .setBranch(context.getGitHubRef())
                     .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()));
             try (Git git = cloneCommand.call()) {
-                Path adventureFolder = repoDirectory.resolve("content").resolve("adventure");
+                Path adventureFolder = repoDirectory.resolve("content").resolve("adventures");
                 try (Stream<Path> files = Files.list(adventureFolder)) {
                     files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
                             .findAny()
