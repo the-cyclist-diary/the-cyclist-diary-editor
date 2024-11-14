@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public class GenerateArticle {
@@ -45,47 +46,48 @@ public class GenerateArticle {
                 Path adventureFolder = repoDirectory.resolve("content").resolve("adventures");
                 commands.notice(String.format("Recherche de l'aventure %s", article.folder()));
                 try (Stream<Path> files = Files.list(adventureFolder)) {
-                    Path articlePath = files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
-                            .findAny()
-                            .map(path -> {
-                                Path destinationPath = adventureFolder.resolve(path).resolve(article.title());
-                                try {
-                                    Files.writeString(destinationPath, article.toString());
-                                } catch (IOException e) {
-                                    System.err.println(e.getMessage());
-                                    commands.error("Le nouvel article n'a pas pu être écrit à cause d'une erreur d'I/O");
-                                    System.exit(ERROR_STATUS);
-                                }
-                                try {
-                                    git.add().addFilepattern(".").call();
-                                    commands.echo("Modifications indexed");
-                                    String commitMessage = String.format("feat: nouvel article - %s", article.title());
-                                    git.commit()
-                                            .setMessage(commitMessage)
-                                            .setAuthor("Ivan Béthus", "ivan.bethus@gmail.com")
-                                            .call();
-                                    commands.echo("Modifications committed");
-                                    git.push()
-                                            .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
-                                            .call();
-                                    commands.echo(String.format("Modifications pushed - Commit message : %s", commitMessage));
-                                    issue.comment(String.format("Article généré le %s dans content/adventures/%s/%s.md", LocalDate.now(),
-                                            article.folder(),
-                                            article.title()));
-                                    issue.close(GHIssueStateReason.COMPLETED);
-                                } catch (GitAPIException e) {
-                                    System.err.println(e.getMessage());
-                                    commands.error("Le nouvel article n'a pas pu être commité");
-                                    System.exit(ERROR_STATUS);
-                                } catch (IOException e) {
-                                    System.err.println(e.getMessage());
-                                    commands.error("Impossible de mettre à jour l'issue");
-                                    System.exit(ERROR_STATUS);
-                                }
-                                return destinationPath;
-                            })
-                            .orElseThrow(() -> new RuntimeException("L'aventure n'a pas pu être trouvée"));
-                    commands.notice(String.format("L'article a été écrit dans %s", articlePath));
+                    Optional<Path> matchingAdventure = files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
+                            .findAny();
+                    if (matchingAdventure.isPresent()) {
+                        Path path = matchingAdventure.get();
+                        Path destinationPath = adventureFolder.resolve(path).resolve(article.title());
+                        try {
+                            Files.writeString(destinationPath, article.toString());
+                        } catch (IOException e) {
+                            System.err.println(e.getMessage());
+                            commands.error("Le nouvel article n'a pas pu être écrit à cause d'une erreur d'I/O");
+                            System.exit(ERROR_STATUS);
+                        }
+                        try {
+                            git.add().addFilepattern(".").call();
+                            commands.echo("Modifications indexed");
+                            String commitMessage = String.format("feat: nouvel article - %s", article.title());
+                            git.commit()
+                                    .setMessage(commitMessage)
+                                    .setAuthor("Ivan Béthus", "ivan.bethus@gmail.com")
+                                    .call();
+                            commands.echo("Modifications committed");
+                            git.push()
+                                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
+                                    .call();
+                            commands.echo(String.format("Modifications pushed - Commit message : %s", commitMessage));
+                            issue.comment(String.format("Article généré le %s dans content/adventures/%s/%s.md", LocalDate.now(),
+                                    article.folder(),
+                                    article.title()));
+                            issue.close(GHIssueStateReason.COMPLETED);
+                        } catch (GitAPIException e) {
+                            System.err.println(e.getMessage());
+                            commands.error("Le nouvel article n'a pas pu être commité");
+                            System.exit(ERROR_STATUS);
+                        } catch (IOException e) {
+                            System.err.println(e.getMessage());
+                            commands.error("Impossible de mettre à jour l'issue");
+                            System.exit(ERROR_STATUS);
+                        }
+                    } else {
+                        commands.error("L'aventure n'a pas pu être trouvée");
+                        System.exit(ERROR_STATUS);
+                    }
                 }
             }
         }
