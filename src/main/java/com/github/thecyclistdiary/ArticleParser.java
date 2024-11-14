@@ -29,7 +29,7 @@ public class ArticleParser {
         issue.getBody().lines()
                 .forEach(line -> {
                     if (adventurePattern.matcher(line).find()) {
-                        folder.set(adventurePattern.split(line)[1]);
+                        folder.set(adventurePattern.split(line)[1].trim());
                     } else if (gpxPattern.matcher(line).find()) {
                         gpxUrl.set(parseGpxUrl(line));
                     } else if (imagePattern.matcher(line).find()) {

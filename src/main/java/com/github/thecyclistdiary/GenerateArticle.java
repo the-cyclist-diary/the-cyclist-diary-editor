@@ -29,10 +29,10 @@ public class GenerateArticle {
 
     @Action
     void action(Commands commands, Context context, Inputs inputs, @Issue GHEventPayload.Issue issuePayload) throws IOException, GitAPIException {
-        commands.notice("Traitement de l'issue...");
+        commands.echo("Traitement de l'issue...");
         GHIssue issue = issuePayload.getIssue();
         if (issue.getLabels().stream().map(GHLabel::getName).anyMatch(ARTICLE::equals)) {
-            commands.notice("L'issue est bien un article, parsing...");
+            commands.echo("L'issue est bien un article, parsing...");
             String token = inputs.getRequired("github-token");
             String username = inputs.getRequired("github-username");
             Article article = ArticleParser.parse(issue);
@@ -44,13 +44,13 @@ public class GenerateArticle {
                     .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()));
             try (Git git = cloneCommand.call()) {
                 Path adventureFolder = repoDirectory.resolve("content").resolve("adventures");
-                commands.notice(String.format("Recherche de l'aventure %s", article.folder()));
+                commands.echo(String.format("Recherche de l'aventure %s", article.folder()));
                 try (Stream<Path> files = Files.list(adventureFolder)) {
-                    Optional<Path> matchingAdventure = files.filter(path -> article.folder().trim().equalsIgnoreCase(path.getFileName().toString()))
+                    Optional<Path> matchingAdventure = files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
                             .findAny();
                     if (matchingAdventure.isPresent()) {
                         Path path = matchingAdventure.get();
-                        Path destinationPath = adventureFolder.resolve(path).resolve(article.title());
+                        Path destinationPath = adventureFolder.resolve(path).resolve(String.format("%s.md", article.title()));
                         try {
                             Files.writeString(destinationPath, article.toString());
                         } catch (IOException e) {
