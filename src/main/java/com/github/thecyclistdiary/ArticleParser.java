@@ -1,9 +1,6 @@
 package com.github.thecyclistdiary;
 
-import com.github.thecyclistdiary.article.dto.Article;
-import com.github.thecyclistdiary.article.dto.ArticleGallery;
-import com.github.thecyclistdiary.article.dto.ArticleLine;
-import com.github.thecyclistdiary.article.dto.ArticlePart;
+import com.github.thecyclistdiary.article.dto.*;
 import org.kohsuke.github.GHIssue;
 
 import java.util.ArrayList;
@@ -31,7 +28,7 @@ public class ArticleParser {
                     if (adventurePattern.matcher(line).find()) {
                         folder.set(adventurePattern.split(line)[1].trim());
                     } else if (gpxPattern.matcher(line).find()) {
-                        gpxUrl.set(parseGpxUrl(line));
+                        parseGpxUrl(line).ifPresent(gpxUrl::set);
                     } else if (imagePattern.matcher(line).find()) {
                         parseImageUrl(line).ifPresent(imageUrl -> {
                             processImage(imageUrl, imageUrls, articleParts);
@@ -60,16 +57,20 @@ public class ArticleParser {
         }
     }
 
-    private static Optional<String> parseImageUrl(String l) {
-        Matcher matcher = GITHUB_ATTACHMENT_PATTERN.matcher(l);
+    private static Optional<String> parseImageUrl(String imageTag) {
+        Matcher matcher = GITHUB_ATTACHMENT_PATTERN.matcher(imageTag);
         if (matcher.find()) {
             return Optional.of(matcher.group(1));
         }
         return Optional.empty();
     }
 
-    private static String parseGpxUrl(String l) {
-        return null;
+    private static Optional<String> parseGpxUrl(String gpxTag) {
+        Matcher matcher = GITHUB_ATTACHMENT_PATTERN.matcher(gpxTag);
+        if (matcher.find()) {
+            return Optional.of(matcher.group(1));
+        }
+        return Optional.empty();
     }
 
 }

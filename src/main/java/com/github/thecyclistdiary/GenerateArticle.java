@@ -16,8 +16,12 @@ import org.kohsuke.github.GHIssueStateReason;
 import org.kohsuke.github.GHLabel;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -49,40 +53,29 @@ public class GenerateArticle {
                     Optional<Path> matchingAdventure = files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
                             .findAny();
                     if (matchingAdventure.isPresent()) {
-                        Path path = matchingAdventure.get();
-                        Path destinationPath = adventureFolder.resolve(path).resolve(String.format("%s.md", article.title()));
+                        Path adventurePath = matchingAdventure.get();
+                        Path articlePath = adventureFolder.resolve(adventurePath).resolve(article.title());
+                        Files.createDirectory(articlePath);
                         try {
-                            Files.writeString(destinationPath, article.toString());
+                            Path articleFile = articlePath.resolve(String.format("%s.md", article.title()));
+                            Files.writeString(articleFile, article.toString());
+                            if (article.gpxUrl() != null) {
+                                downloadGpxFile(commands, article, articlePath);
+                            }
                         } catch (IOException e) {
-                            System.err.println(e.getMessage());
-                            commands.error("Le nouvel article n'a pas pu être écrit à cause d'une erreur d'I/O");
-                            System.exit(ERROR_STATUS);
+                            logErrorAndExit(e.getMessage(), commands,
+                                    "Le nouvel article n'a pas pu être écrit à cause d'une erreur d'I/O");
+                        } catch (URISyntaxException e) {
+                            logErrorAndExit(e.getMessage(), commands,
+                                    "Impossible de télécharger le fichier gpx lié à l'article");
                         }
                         try {
-                            git.add().addFilepattern(".").call();
-                            commands.echo("Modifications indexed");
-                            String commitMessage = String.format("feat: nouvel article - %s", article.title());
-                            git.commit()
-                                    .setMessage(commitMessage)
-                                    .setAuthor("Ivan Béthus", "ivan.bethus@gmail.com")
-                                    .call();
-                            commands.echo("Modifications committed");
-                            git.push()
-                                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
-                                    .call();
-                            commands.echo(String.format("Modifications pushed - Commit message : %s", commitMessage));
-                            issue.comment(String.format("Article généré le %s dans content/adventures/%s/%s.md", LocalDate.now(),
-                                    article.folder(),
-                                    article.title()));
+                            commitAndPush(commands, git, article, username, token, issue);
                             issue.close(GHIssueStateReason.COMPLETED);
                         } catch (GitAPIException e) {
-                            System.err.println(e.getMessage());
-                            commands.error("Le nouvel article n'a pas pu être commité");
-                            System.exit(ERROR_STATUS);
+                            logErrorAndExit(e.getMessage(), commands, "Le nouvel article n'a pas pu être commité");
                         } catch (IOException e) {
-                            System.err.println(e.getMessage());
-                            commands.error("Impossible de mettre à jour l'issue");
-                            System.exit(ERROR_STATUS);
+                            logErrorAndExit(e.getMessage(), commands, "Impossible de mettre à jour l'issue");
                         }
                     } else {
                         commands.error("L'aventure n'a pas pu être trouvée");
@@ -92,5 +85,37 @@ public class GenerateArticle {
             }
         }
         commands.appendJobSummary(String.format(":wave: L'article %s a bien été généré !", issue.getTitle()));
+    }
+
+    private static void downloadGpxFile(Commands commands, Article article, Path articlePath) throws IOException, URISyntaxException {
+        InputStream in = new URI(article.gpxUrl()).toURL().openStream();
+        String gpxName = String.format("%s.gpx", article.title());
+        Files.copy(in, articlePath.resolve(gpxName),
+                StandardCopyOption.REPLACE_EXISTING);
+        commands.echo(String.format("Le fichier %s a bien été téléchargé", gpxName));
+    }
+
+    private static void logErrorAndExit(String e, Commands commands, String message) {
+        System.err.println(e);
+        commands.error(message);
+        System.exit(ERROR_STATUS);
+    }
+
+    private static void commitAndPush(Commands commands, Git git, Article article, String username, String token, GHIssue issue) throws GitAPIException, IOException {
+        git.add().addFilepattern(".").call();
+        commands.echo("Modifications indexed");
+        String commitMessage = String.format("feat: nouvel article - %s", article.title());
+        git.commit()
+                .setMessage(commitMessage)
+                .setAuthor("Ivan Béthus", "ivan.bethus@gmail.com")
+                .call();
+        commands.echo("Modifications committed");
+        git.push()
+                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
+                .call();
+        commands.echo(String.format("Modifications pushed - Commit message : %s", commitMessage));
+        issue.comment(String.format("Article généré le %s dans content/adventures/%s/%s.md", LocalDate.now(),
+                article.folder(),
+                article.title()));
     }
 }
