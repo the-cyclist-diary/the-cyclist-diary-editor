@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 public class GenerateArticle {
 
     private static final String ARTICLE = "article";
+    private static final int ERROR_STATUS = 1;
 
     @Action
     void action(Commands commands, Context context, Inputs inputs, @Issue GHEventPayload.Issue issuePayload) throws IOException, GitAPIException {
@@ -42,16 +43,18 @@ public class GenerateArticle {
                     .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()));
             try (Git git = cloneCommand.call()) {
                 Path adventureFolder = repoDirectory.resolve("content").resolve("adventures");
+                commands.notice(String.format("Recherche de l'aventure %s", article.folder()));
                 try (Stream<Path> files = Files.list(adventureFolder)) {
-                    files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
+                    Path articlePath = files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
                             .findAny()
-                            .ifPresent(path -> {
+                            .map(path -> {
                                 Path destinationPath = adventureFolder.resolve(path).resolve(article.title());
                                 try {
                                     Files.writeString(destinationPath, article.toString());
                                 } catch (IOException e) {
                                     System.err.println(e.getMessage());
                                     commands.error("Le nouvel article n'a pas pu être écrit à cause d'une erreur d'I/O");
+                                    System.exit(ERROR_STATUS);
                                 }
                                 try {
                                     git.add().addFilepattern(".").call();
@@ -73,14 +76,19 @@ public class GenerateArticle {
                                 } catch (GitAPIException e) {
                                     System.err.println(e.getMessage());
                                     commands.error("Le nouvel article n'a pas pu être commité");
+                                    System.exit(ERROR_STATUS);
                                 } catch (IOException e) {
                                     System.err.println(e.getMessage());
                                     commands.error("Impossible de mettre à jour l'issue");
+                                    System.exit(ERROR_STATUS);
                                 }
-                            });
+                                return destinationPath;
+                            })
+                            .orElseThrow(() -> new RuntimeException("L'aventure n'a pas pu être trouvée"));
+                    commands.notice(String.format("L'article a été écrit dans %s", articlePath));
                 }
             }
         }
-        commands.appendJobSummary(":wave: The article has been generated !");
+        commands.appendJobSummary(String.format(":wave: L'article %s a bien été généré !", issue.getTitle()));
     }
 }
