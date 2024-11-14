@@ -13,7 +13,7 @@ public record ArticleGallery(List<String> images) implements ArticlePart {
                         """,
                 images().size(),
                 images().stream()
-                        .map(img -> String.format("{{< img src=\"%s\"> >}}", img))
+                        .map(img -> String.format("{{< img src=\"%s\" >}}", img))
                         .collect(Collectors.joining("\n")));
     }
 }
