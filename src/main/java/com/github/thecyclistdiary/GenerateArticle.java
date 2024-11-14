@@ -46,7 +46,7 @@ public class GenerateArticle {
                 Path adventureFolder = repoDirectory.resolve("content").resolve("adventures");
                 commands.notice(String.format("Recherche de l'aventure %s", article.folder()));
                 try (Stream<Path> files = Files.list(adventureFolder)) {
-                    Optional<Path> matchingAdventure = files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
+                    Optional<Path> matchingAdventure = files.filter(path -> article.folder().trim().equalsIgnoreCase(path.getFileName().toString()))
                             .findAny();
                     if (matchingAdventure.isPresent()) {
                         Path path = matchingAdventure.get();
