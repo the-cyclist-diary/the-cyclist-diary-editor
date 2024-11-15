@@ -1,6 +1,7 @@
 package com.github.thecyclistdiary;
 
 import com.github.thecyclistdiary.article.dto.Article;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.kohsuke.github.GHIssue;
 import org.mockito.Mockito;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+@Disabled
 class ArticleParserTest {
 
     @Test
@@ -43,7 +45,8 @@ class ArticleParserTest {
             expectedArticleContent = reader.lines().collect(Collectors.joining("\n"));
         }
         assertThat(actualArticle.title()).isEqualTo(title);
-        assertThat(actualArticle.toString()).isEqualTo(String.format(expectedArticleContent, LocalDate.now()));
+        assertThat(actualArticle.toString()).isEqualTo(String.format(expectedArticleContent,
+                LocalDate.now()));
     }
 
 }

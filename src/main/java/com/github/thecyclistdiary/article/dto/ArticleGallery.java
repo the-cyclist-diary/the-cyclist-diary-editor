@@ -3,7 +3,7 @@ package com.github.thecyclistdiary.article.dto;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record ArticleGallery(List<String> images) implements ArticlePart {
+public record ArticleGallery(List<ArticleImage> images) implements ArticlePart {
     @Override
     public String toString() {
         return String.format("""
@@ -13,7 +13,7 @@ public record ArticleGallery(List<String> images) implements ArticlePart {
                         """,
                 images().size(),
                 images().stream()
-                        .map(img -> String.format("{{< img src=\"%s\" >}}", img))
+                        .map(img -> String.format("{{< img src=\"%s\" >}}", img.name()))
                         .collect(Collectors.joining("\n")));
     }
 }

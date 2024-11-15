@@ -6,6 +6,7 @@ import org.kohsuke.github.GHIssue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,31 +31,29 @@ public class ArticleParser {
                     } else if (gpxPattern.matcher(line).find()) {
                         parseGpxUrl(line).ifPresent(gpxUrl::set);
                     } else if (imagePattern.matcher(line).find()) {
-                        parseImageUrl(line).ifPresent(imageUrl -> {
-                            processImage(imageUrl, imageUrls, articleParts);
-                        });
+                        parseImageUrl(line).ifPresent(imageUrl -> processImage(imageUrl, imageUrls, articleParts));
                     } else {
                         articleParts.add(new ArticleLine(line));
                     }
                 });
 
-        String body = articleParts.stream()
-                .map(Object::toString)
-                .collect(Collectors.joining("\n"));
-
-        return new Article(folder.get(), issue.getTitle(), body, imageUrls, gpxUrl.get());
+        return new Article(folder.get(), issue.getTitle(), articleParts, gpxUrl.get());
     }
 
     private static void processImage(String imageUrl, List<String> imageUrls, List<ArticlePart> articleParts) {
         imageUrls.add(imageUrl);
-        if (articleParts.getLast() instanceof ArticleGallery gallery) {
-            gallery.images().add(imageUrl);
+        if (articleParts.getLast() instanceof ArticleGallery(List<ArticleImage> images)) {
+            images.add(new ArticleImage(imageUrl, getId()));
         } else {
-            List<String> images = new ArrayList<>();
-            images.add(imageUrl);
+            List<ArticleImage> images = new ArrayList<>();
+            images.add(new ArticleImage(imageUrl, getId()));
             ArticleGallery gallery = new ArticleGallery(images);
             articleParts.add(gallery);
         }
+    }
+
+    private static String getId() {
+        return String.format("%s.jpg", UUID.randomUUID());
     }
 
     private static Optional<String> parseImageUrl(String imageTag) {

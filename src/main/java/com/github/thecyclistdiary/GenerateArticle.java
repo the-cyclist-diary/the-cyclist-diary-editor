@@ -1,6 +1,7 @@
 package com.github.thecyclistdiary;
 
 import com.github.thecyclistdiary.article.dto.Article;
+import com.github.thecyclistdiary.article.dto.ArticleGallery;
 import io.quarkiverse.githubaction.Action;
 import io.quarkiverse.githubaction.Commands;
 import io.quarkiverse.githubaction.Context;
@@ -53,30 +54,7 @@ public class GenerateArticle {
                     Optional<Path> matchingAdventure = files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
                             .findAny();
                     if (matchingAdventure.isPresent()) {
-                        Path adventurePath = matchingAdventure.get();
-                        Path articlePath = adventureFolder.resolve(adventurePath).resolve(article.title());
-                        Files.createDirectory(articlePath);
-                        try {
-                            Path articleFile = articlePath.resolve(String.format("%s.md", article.title()));
-                            Files.writeString(articleFile, article.toString());
-                            if (article.gpxUrl() != null) {
-                                downloadGpxFile(commands, article, articlePath);
-                            }
-                        } catch (IOException e) {
-                            logErrorAndExit(e.getMessage(), commands,
-                                    "Le nouvel article n'a pas pu être écrit à cause d'une erreur d'I/O");
-                        } catch (URISyntaxException e) {
-                            logErrorAndExit(e.getMessage(), commands,
-                                    "Impossible de télécharger le fichier gpx lié à l'article");
-                        }
-                        try {
-                            commitAndPush(commands, git, article, username, token, issue);
-                            issue.close(GHIssueStateReason.COMPLETED);
-                        } catch (GitAPIException e) {
-                            logErrorAndExit(e.getMessage(), commands, "Le nouvel article n'a pas pu être commité");
-                        } catch (IOException e) {
-                            logErrorAndExit(e.getMessage(), commands, "Impossible de mettre à jour l'issue");
-                        }
+                        writeArticle(commands, matchingAdventure, adventureFolder, article, git, username, token, issue);
                     } else {
                         commands.error("L'aventure n'a pas pu être trouvée");
                         System.exit(ERROR_STATUS);
@@ -87,6 +65,55 @@ public class GenerateArticle {
         commands.appendJobSummary(String.format(":wave: L'article %s a bien été généré !", issue.getTitle()));
     }
 
+    private static void writeArticle(Commands commands, Optional<Path> matchingAdventure, Path adventureFolder, Article article, Git git, String username, String token, GHIssue issue) throws IOException {
+        Path adventurePath = matchingAdventure.get();
+        Path articlePath = adventureFolder.resolve(adventurePath).resolve(article.title());
+        Files.createDirectory(articlePath);
+        parseArticle(commands, article, articlePath);
+        try {
+            commitAndPush(commands, git, article, username, token, issue);
+            issue.close(GHIssueStateReason.COMPLETED);
+        } catch (GitAPIException e) {
+            logErrorAndExit(commands, "Le nouvel article n'a pas pu être commité");
+        } catch (IOException e) {
+            logErrorAndExit(commands, "Impossible de mettre à jour l'issue");
+        }
+    }
+
+    private static void parseArticle(Commands commands, Article article, Path articlePath) {
+        try {
+            Path articleFile = articlePath.resolve(String.format("%s.md", article.title()));
+            Files.writeString(articleFile, article.toString());
+            downloadImageFiles(commands, article, articlePath);
+            if (article.gpxUrl() != null) {
+                downloadGpxFile(commands, article, articlePath);
+            }
+        } catch (IOException e) {
+            logErrorAndExit(commands,
+                    "Le nouvel article n'a pas pu être écrit à cause d'une erreur d'I/O");
+        } catch (URISyntaxException e) {
+            logErrorAndExit(commands,
+                    "Impossible de télécharger le fichier gpx lié à l'article");
+        }
+    }
+
+    private static void downloadImageFiles(Commands commands, Article article, Path articlePath) {
+        article.articleParts().stream()
+                .filter(p -> p instanceof ArticleGallery)
+                .flatMap(gallery -> ((ArticleGallery) gallery).images().stream())
+                .forEach(image -> {
+                    try {
+                        InputStream in = new URI(image.url()).toURL().openStream();
+                        Files.copy(in, articlePath.resolve(image.name()),
+                                StandardCopyOption.REPLACE_EXISTING);
+                        commands.echo(String.format("L'image %s a bien été téléchargé", image.name()));
+                    } catch (IOException | URISyntaxException e) {
+                        logErrorAndExit(commands, String.format("Impossible de télécharger l'image à l'adresse %s", image.url()));
+
+                    }
+                });
+    }
+
     private static void downloadGpxFile(Commands commands, Article article, Path articlePath) throws IOException, URISyntaxException {
         InputStream in = new URI(article.gpxUrl()).toURL().openStream();
         String gpxName = String.format("%s.gpx", article.title());
@@ -95,8 +122,7 @@ public class GenerateArticle {
         commands.echo(String.format("Le fichier %s a bien été téléchargé", gpxName));
     }
 
-    private static void logErrorAndExit(String e, Commands commands, String message) {
-        System.err.println(e);
+    private static void logErrorAndExit(Commands commands, String message) {
         commands.error(message);
         System.exit(ERROR_STATUS);
     }
