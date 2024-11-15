@@ -84,7 +84,7 @@ public class GenerateArticle {
 
     private static void parseArticle(Commands commands, Article article, Path articlePath) {
         try {
-            Path articleFile = articlePath.resolve(String.format("%s.md", article.title()));
+            Path articleFile = articlePath.resolve("index.md");
             Files.writeString(articleFile, article.toString());
             downloadImageFiles(commands, article, articlePath);
             if (article.gpxUrl() != null) {
