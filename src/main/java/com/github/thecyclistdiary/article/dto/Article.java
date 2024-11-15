@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record Article(String folder, String title, List<ArticlePart> articleParts, String gpxUrl) {
+public record Article(String title, List<ArticlePart> articleParts, String gpxUrl) {
     @Override
     public String toString() {
         return String.format("""

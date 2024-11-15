@@ -47,12 +47,12 @@ public class GenerateArticle {
                     .setBranch(context.getGitHubRef())
                     .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()));
             try (Git git = cloneCommand.call()) {
-                issue.getLabels().stream().findFirst()
-                        .orElseThrow(NoLabelFoundException::new);
+                String adventureName = issue.getLabels().stream().findFirst()
+                        .orElseThrow(NoLabelFoundException::new).getName();
                 Path adventureFolder = repoDirectory.resolve("content").resolve("adventures");
-                commands.echo(String.format("Recherche de l'aventure %s", article.folder()));
+                commands.echo(String.format("Recherche de l'aventure %s", adventureName));
                 try (Stream<Path> files = Files.list(adventureFolder)) {
-                    Optional<Path> matchingAdventure = files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
+                    Optional<Path> matchingAdventure = files.filter(path -> adventureName.equalsIgnoreCase(path.getFileName().toString()))
                             .findAny();
                     if (matchingAdventure.isPresent()) {
                         writeArticle(commands, matchingAdventure.get(), adventureFolder, article, git, username, token, issue);
@@ -73,7 +73,7 @@ public class GenerateArticle {
         Files.createDirectory(articlePath);
         parseArticle(commands, article, articlePath);
         try {
-            commitAndPush(commands, git, article, username, token, issue);
+            commitAndPush(commands, git, article, username, token, issue, articlePath);
             issue.close(GHIssueStateReason.COMPLETED);
         } catch (GitAPIException e) {
             logErrorAndExit(commands, "Le nouvel article n'a pas pu être commité");
@@ -129,7 +129,7 @@ public class GenerateArticle {
         System.exit(ERROR_STATUS);
     }
 
-    private static void commitAndPush(Commands commands, Git git, Article article, String username, String token, GHIssue issue) throws GitAPIException, IOException {
+    private static void commitAndPush(Commands commands, Git git, Article article, String username, String token, GHIssue issue, Path articlePath) throws GitAPIException, IOException {
         git.add().addFilepattern(".").call();
         commands.echo("Modifications indexed");
         String commitMessage = String.format("feat: nouvel article - %s", article.title());
@@ -142,8 +142,7 @@ public class GenerateArticle {
                 .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
                 .call();
         commands.echo(String.format("Modifications pushed - Commit message : %s", commitMessage));
-        issue.comment(String.format("Article généré le %s dans content/adventures/%s/%s.md", LocalDate.now(),
-                article.folder(),
-                article.title()));
+        issue.comment(String.format("Article généré le %s dans content/adventures/%s.md", LocalDate.now(),
+                articlePath));
     }
 }
