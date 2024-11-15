@@ -14,7 +14,6 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.kohsuke.github.GHEventPayload;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueStateReason;
-import org.kohsuke.github.GHLabel;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,7 +35,7 @@ public class GenerateArticle {
     void action(Commands commands, Context context, Inputs inputs, @Issue GHEventPayload.Issue issuePayload) throws IOException, GitAPIException {
         commands.echo("Traitement de l'issue...");
         GHIssue issue = issuePayload.getIssue();
-        if (issue.getLabels().stream().map(GHLabel::getName).anyMatch(ARTICLE::equals)) {
+        if (ARTICLE.equals(issue.getMilestone().getTitle())) {
             commands.echo("L'issue est bien un article, parsing...");
             String token = inputs.getRequired("github-token");
             String username = inputs.getRequired("github-username");
@@ -48,25 +47,28 @@ public class GenerateArticle {
                     .setBranch(context.getGitHubRef())
                     .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()));
             try (Git git = cloneCommand.call()) {
+                issue.getLabels().stream().findFirst()
+                        .orElseThrow(NoLabelFoundException::new);
                 Path adventureFolder = repoDirectory.resolve("content").resolve("adventures");
                 commands.echo(String.format("Recherche de l'aventure %s", article.folder()));
                 try (Stream<Path> files = Files.list(adventureFolder)) {
                     Optional<Path> matchingAdventure = files.filter(path -> article.folder().equalsIgnoreCase(path.getFileName().toString()))
                             .findAny();
                     if (matchingAdventure.isPresent()) {
-                        writeArticle(commands, matchingAdventure, adventureFolder, article, git, username, token, issue);
+                        writeArticle(commands, matchingAdventure.get(), adventureFolder, article, git, username, token, issue);
                     } else {
                         commands.error("L'aventure n'a pas pu être trouvée");
                         System.exit(ERROR_STATUS);
                     }
                 }
+            } catch (NoLabelFoundException e) {
+                logErrorAndExit(commands, "L'issue n'a pas de label !");
             }
         }
         commands.appendJobSummary(String.format(":wave: L'article %s a bien été généré !", issue.getTitle()));
     }
 
-    private static void writeArticle(Commands commands, Optional<Path> matchingAdventure, Path adventureFolder, Article article, Git git, String username, String token, GHIssue issue) throws IOException {
-        Path adventurePath = matchingAdventure.get();
+    private static void writeArticle(Commands commands, Path adventurePath, Path adventureFolder, Article article, Git git, String username, String token, GHIssue issue) throws IOException {
         Path articlePath = adventureFolder.resolve(adventurePath).resolve(article.title());
         Files.createDirectory(articlePath);
         parseArticle(commands, article, articlePath);
