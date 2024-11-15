@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
-
 @Disabled
 class ArticleParserTest {
 

@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record Article(String title, List<ArticlePart> articleParts, String gpxUrl) {
+public record Article(String title, List<ArticlePart> articleParts, String gpxUrl, String date) {
     @Override
     public String toString() {
         return String.format("""
@@ -17,7 +17,7 @@ public record Article(String title, List<ArticlePart> articleParts, String gpxUr
                         %s
                         """,
                 title,
-                LocalDate.now(),
+                date != null ? date : LocalDate.now(),
                 getBodyAsString()
         );
     }

@@ -1,4 +1,8 @@
-:adventure: aventure de test
+### Date de l'article
+
+2024-12-12
+
+### Contenu
 
 A nice content.
 Some image :
