@@ -14,6 +14,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.kohsuke.github.GHEventPayload;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueStateReason;
+import org.kohsuke.github.GHRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +33,8 @@ public class GenerateArticle {
     private static final int ERROR_STATUS = 1;
 
     @Action
-    void action(Commands commands, Context context, Inputs inputs, @Issue GHEventPayload.Issue issuePayload) throws IOException, GitAPIException {
+    void action(Commands commands, Context context, Inputs inputs, @Issue GHEventPayload.Issue issuePayload,
+    GHRepository repository) throws IOException, GitAPIException {
         commands.echo("Traitement de l'issue...");
         GHIssue issue = issuePayload.getIssue();
         if (ARTICLE.equals(issue.getMilestone().getTitle())) {
@@ -55,7 +57,8 @@ public class GenerateArticle {
                     Optional<Path> matchingAdventure = files.filter(path -> adventureName.equalsIgnoreCase(path.getFileName().toString()))
                             .findAny();
                     if (matchingAdventure.isPresent()) {
-                        writeArticle(commands, matchingAdventure.get(), adventureFolder, article, git, username, token, issue);
+                        writeArticle(commands, matchingAdventure.get(), adventureFolder, article, git, username,
+                         token, issue, repository);
                     } else {
                         commands.error("L'aventure n'a pas pu être trouvée");
                         System.exit(ERROR_STATUS);
@@ -68,12 +71,12 @@ public class GenerateArticle {
         commands.appendJobSummary(String.format(":wave: L'article %s a bien été généré !", issue.getTitle()));
     }
 
-    private static void writeArticle(Commands commands, Path adventurePath, Path adventureFolder, Article article, Git git, String username, String token, GHIssue issue) throws IOException {
+    private static void writeArticle(Commands commands, Path adventurePath, Path adventureFolder, Article article, Git git, String username, String token, GHIssue issue, GHRepository repository) throws IOException {
         Path articlePath = adventureFolder.resolve(adventurePath).resolve(article.title());
         Files.createDirectory(articlePath);
         parseArticle(commands, article, articlePath);
         try {
-            commitAndPush(commands, git, article, username, token, issue, articlePath);
+            commitAndPush(commands, git, article, username, token, issue, articlePath, repository);
             issue.close(GHIssueStateReason.COMPLETED);
         } catch (GitAPIException e) {
             logErrorAndExit(commands, "Le nouvel article n'a pas pu être commité");
@@ -129,9 +132,17 @@ public class GenerateArticle {
         System.exit(ERROR_STATUS);
     }
 
-    private static void commitAndPush(Commands commands, Git git, Article article, String username, String token, GHIssue issue, Path articlePath) throws GitAPIException, IOException {
+    private static void commitAndPush(Commands commands, Git git, Article article, String username, String token, GHIssue issue, 
+    Path articlePath, GHRepository repository) throws GitAPIException, IOException {
+        git.branchCreate()
+                .setName(article.title())
+                .setStartPoint("HEAD")
+                .call();
+        commands.echo(String.format("Nouvelle branche créée : %s", article.title()));
+        git.checkout().setName(article.title()).call();
+        commands.echo(String.format("Changement de branche vers : %s", article.title()));
         git.add().addFilepattern(".").call();
-        commands.echo("Modifications indexed");
+        commands.echo("Modifications indexées");
         String commitMessage = String.format("feat: nouvel article - %s", article.title());
         git.commit()
                 .setMessage(commitMessage)
@@ -139,9 +150,16 @@ public class GenerateArticle {
                 .call();
         commands.echo("Modifications committed");
         git.push()
+                .setRemote("origin")
                 .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
                 .call();
         commands.echo(String.format("Modifications pushed - Commit message : %s", commitMessage));
+        repository.createPullRequest(
+                String.format("article/%s", article.title()),
+                article.title(),
+                "main",
+                commitMessage
+        );       
         issue.comment(String.format("Article généré le %s dans content/adventures/%s.md", LocalDate.now(),
                 articlePath));
     }

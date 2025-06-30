@@ -7,7 +7,7 @@ public record ArticleGallery(List<ArticleImage> images) implements ArticlePart {
     @Override
     public String toString() {
         if (images.size() == 1){
-            return String.format("![an image from this adventure](%s)", images.getFirst());
+            return String.format("![an image from this adventure](%s)", images.getFirst().name());
         }
         return String.format("""
                         {{< gallery class="content-gallery" btn="%d">}}
