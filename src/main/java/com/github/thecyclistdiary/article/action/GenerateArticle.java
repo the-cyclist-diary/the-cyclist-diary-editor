@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.eclipse.jgit.api.CloneCommand;
@@ -20,6 +21,7 @@ import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueStateReason;
 import org.kohsuke.github.GHRepository;
 
+import com.fasterxml.jackson.annotation.ObjectIdGenerators.UUIDGenerator;
 import com.github.thecyclistdiary.NoLabelFoundException;
 import com.github.thecyclistdiary.article.dto.Article;
 import com.github.thecyclistdiary.article.dto.ArticleGallery;
@@ -145,7 +147,7 @@ public class GenerateArticle {
     private static void commitAndPush(Commands commands, Git git, Article article, String username, String token,
             GHIssue issue,
             Path articlePath, GHRepository repository) throws GitAPIException, IOException {
-        String newBranch = article.title().replaceAll(" ", "_");
+        String newBranch = UUID.randomUUID().toString();
         git.branchCreate()
                 .setName(newBranch)
                 .setStartPoint("HEAD")
