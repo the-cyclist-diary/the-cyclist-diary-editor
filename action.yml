@@ -7,6 +7,8 @@ inputs:
   github-username:
     description: 'Github username'
     required: true
+  content-path:
+    description: 'Path to the content folder where the maps will be generated'
   action:
     description: 'Name of the action (if named)'
     required: false

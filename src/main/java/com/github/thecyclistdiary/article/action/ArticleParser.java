@@ -1,4 +1,4 @@
-package com.github.thecyclistdiary;
+package com.github.thecyclistdiary.article.action;
 
 import com.github.thecyclistdiary.article.dto.*;
 import org.kohsuke.github.GHIssue;

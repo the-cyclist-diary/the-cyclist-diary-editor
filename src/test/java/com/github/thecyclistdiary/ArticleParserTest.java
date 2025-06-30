@@ -1,5 +1,6 @@
 package com.github.thecyclistdiary;
 
+import com.github.thecyclistdiary.article.action.ArticleParser;
 import com.github.thecyclistdiary.article.dto.Article;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

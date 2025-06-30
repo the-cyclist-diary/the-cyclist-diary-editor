@@ -1,5 +1,6 @@
-package com.github.thecyclistdiary;
+package com.github.thecyclistdiary.article.action;
 
+import com.github.thecyclistdiary.NoLabelFoundException;
 import com.github.thecyclistdiary.article.dto.Article;
 import com.github.thecyclistdiary.article.dto.ArticleGallery;
 import io.quarkiverse.githubaction.Action;
@@ -32,9 +33,9 @@ public class GenerateArticle {
     private static final String ARTICLE = "article";
     private static final int ERROR_STATUS = 1;
 
-    @Action
+    @Action("Generate article")
     void action(Commands commands, Context context, Inputs inputs, @Issue GHEventPayload.Issue issuePayload,
-    GHRepository repository) throws IOException, GitAPIException {
+                GHRepository repository) throws IOException, GitAPIException {
         commands.echo("Traitement de l'issue...");
         GHIssue issue = issuePayload.getIssue();
         if (ARTICLE.equals(issue.getMilestone().getTitle())) {
@@ -58,7 +59,7 @@ public class GenerateArticle {
                             .findAny();
                     if (matchingAdventure.isPresent()) {
                         writeArticle(commands, matchingAdventure.get(), adventureFolder, article, git, username,
-                         token, issue, repository);
+                                token, issue, repository);
                     } else {
                         commands.error("L'aventure n'a pas pu être trouvée");
                         System.exit(ERROR_STATUS);
@@ -132,8 +133,8 @@ public class GenerateArticle {
         System.exit(ERROR_STATUS);
     }
 
-    private static void commitAndPush(Commands commands, Git git, Article article, String username, String token, GHIssue issue, 
-    Path articlePath, GHRepository repository) throws GitAPIException, IOException {
+    private static void commitAndPush(Commands commands, Git git, Article article, String username, String token, GHIssue issue,
+                                      Path articlePath, GHRepository repository) throws GitAPIException, IOException {
         git.branchCreate()
                 .setName(article.title())
                 .setStartPoint("HEAD")
@@ -159,7 +160,7 @@ public class GenerateArticle {
                 article.title(),
                 "main",
                 commitMessage
-        );       
+        );
         issue.comment(String.format("Article généré le %s dans content/adventures/%s.md", LocalDate.now(),
                 articlePath));
     }
