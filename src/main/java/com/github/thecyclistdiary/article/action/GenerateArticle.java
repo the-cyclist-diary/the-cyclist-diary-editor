@@ -141,9 +141,9 @@ public class GenerateArticle {
                 .setName(newBranch)
                 .setStartPoint("HEAD")
                 .call();
-        commands.echo(String.format("Nouvelle branche créée : %s", article.title()));
+        commands.echo(String.format("Nouvelle branche créée : %s", newBranch));
         git.checkout().setName(newBranch).call();
-        commands.echo(String.format("Changement de branche vers : %s", article.title()));
+        commands.echo(String.format("Changement de branche vers : %s", newBranch));
         git.add().addFilepattern(".").call();
         commands.echo("Modifications indexées");
         String commitMessage = String.format("feat: nouvel article - %s", article.title());
