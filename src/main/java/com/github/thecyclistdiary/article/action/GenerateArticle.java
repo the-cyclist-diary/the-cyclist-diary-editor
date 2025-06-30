@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 public class GenerateArticle {
@@ -135,12 +136,13 @@ public class GenerateArticle {
 
     private static void commitAndPush(Commands commands, Git git, Article article, String username, String token, GHIssue issue,
                                       Path articlePath, GHRepository repository) throws GitAPIException, IOException {
+        String newBranch = article.title().replaceAll(" ", "_");
         git.branchCreate()
-                .setName(article.title().replaceAll(" ", "_"))
+                .setName(newBranch)
                 .setStartPoint("HEAD")
                 .call();
         commands.echo(String.format("Nouvelle branche créée : %s", article.title()));
-        git.checkout().setName(article.title()).call();
+        git.checkout().setName(newBranch).call();
         commands.echo(String.format("Changement de branche vers : %s", article.title()));
         git.add().addFilepattern(".").call();
         commands.echo("Modifications indexées");
