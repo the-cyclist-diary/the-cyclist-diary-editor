@@ -136,7 +136,7 @@ public class GenerateArticle {
     private static void commitAndPush(Commands commands, Git git, Article article, String username, String token, GHIssue issue,
                                       Path articlePath, GHRepository repository) throws GitAPIException, IOException {
         git.branchCreate()
-                .setName(article.title())
+                .setName(article.title().replaceAll(" ", "_"))
                 .setStartPoint("HEAD")
                 .call();
         commands.echo(String.format("Nouvelle branche créée : %s", article.title()));
