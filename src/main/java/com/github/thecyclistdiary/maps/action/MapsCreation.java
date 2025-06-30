@@ -64,6 +64,7 @@ public class MapsCreation {
             } else {
                 commands.warning("No changes to commit, skipping git commit and push.");
             }
+            pullRequestPayload.getPullRequest().updateBranch();
             pullRequestPayload.getPullRequest().merge("Pull request closed successfully");
         }
     }
