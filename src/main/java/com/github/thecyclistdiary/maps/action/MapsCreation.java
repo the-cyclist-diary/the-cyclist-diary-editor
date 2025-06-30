@@ -14,7 +14,6 @@ import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.kohsuke.github.GHEventPayload;
-import org.kohsuke.github.GHIssueStateReason;
 
 import io.quarkiverse.githubaction.Action;
 import io.quarkiverse.githubaction.Commands;
@@ -65,8 +64,7 @@ public class MapsCreation {
             } else {
                 commands.warning("No changes to commit, skipping git commit and push.");
             }
-            pullRequestPayload.getPullRequest().close(GHIssueStateReason.COMPLETED);
-            commands.notice("Pull request closed successfully");
+            pullRequestPayload.getPullRequest().merge("Pull request closed successfully");
         }
     }
 
