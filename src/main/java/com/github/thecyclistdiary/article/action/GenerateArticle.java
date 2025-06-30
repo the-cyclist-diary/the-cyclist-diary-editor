@@ -170,7 +170,7 @@ public class GenerateArticle {
         commands.echo(String.format("Modifications pushed - Commit message : %s", commitMessage));
         repository.createPullRequest(
                 String.format("article/%s", article.title()),
-                article.title(),
+                newBranch,
                 "main",
                 commitMessage);
         issue.comment(String.format("Article généré le %s dans content/adventures/%s.md", LocalDate.now(),
