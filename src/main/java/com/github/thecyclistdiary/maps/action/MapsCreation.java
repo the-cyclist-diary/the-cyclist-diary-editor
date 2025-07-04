@@ -63,8 +63,9 @@ public class MapsCreation {
             } else {
                 commands.warning("No changes to commit, skipping git commit and push.");
             }
+            pullRequestPayload.getPullRequest().refresh();
             for (int attempt = 1; attempt <= 3; attempt++) {
-                if (pullRequestPayload.getPullRequest().getMergeable()){
+                if (pullRequestPayload.getPullRequest().getMergeable() == true){
                     pullRequestPayload.getPullRequest().merge("Pull request closed successfully");
                 }
                 if (attempt < 3) {
