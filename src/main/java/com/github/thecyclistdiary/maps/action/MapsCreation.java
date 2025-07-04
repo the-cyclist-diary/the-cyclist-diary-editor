@@ -11,8 +11,6 @@ import map.gpx.GpxStyler;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.errors.InvalidRemoteException;
-import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.kohsuke.github.GHEventPayload;
@@ -64,19 +62,7 @@ public class MapsCreation {
                 commands.warning("No changes to commit, skipping git commit and push.");
             }
             pullRequestPayload.getPullRequest().refresh();
-            for (int attempt = 1; attempt <= 3; attempt++) {
-                if (pullRequestPayload.getPullRequest().getMergeable() == true){
-                    pullRequestPayload.getPullRequest().merge("Pull request closed successfully");
-                }
-                if (attempt < 3) {
-                    Thread.sleep(1000);
-                    pullRequestPayload.getPullRequest().refresh();
-                }
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            commands.warning("Impossible de réaliser le merge, interruption du thread");
-            throw new RuntimeException("Impossible de réaliser le merge", e);
+            pullRequestPayload.getPullRequest().merge("Pull request closed successfully");
         }
     }
 
