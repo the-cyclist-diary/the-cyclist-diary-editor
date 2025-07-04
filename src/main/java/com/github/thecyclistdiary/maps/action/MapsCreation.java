@@ -63,8 +63,19 @@ public class MapsCreation {
             } else {
                 commands.warning("No changes to commit, skipping git commit and push.");
             }
-            git.pull().call();
-            pullRequestPayload.getPullRequest().merge("Pull request closed successfully");
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                if (pullRequestPayload.getPullRequest().getMergeable()){
+                    pullRequestPayload.getPullRequest().merge("Pull request closed successfully");
+                }
+                if (attempt < 3) {
+                    Thread.sleep(1000);
+                    pullRequestPayload.getPullRequest().refresh();
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            commands.warning("Impossible de réaliser le merge, interruption du thread");
+            throw new RuntimeException("Impossible de réaliser le merge", e);
         }
     }
 
