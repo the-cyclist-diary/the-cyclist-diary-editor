@@ -1,11 +1,13 @@
 package com.github.thecyclistdiary.maps.action;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.util.Set;
-
+import io.quarkiverse.githubaction.Action;
+import io.quarkiverse.githubaction.Commands;
+import io.quarkiverse.githubaction.Context;
+import io.quarkiverse.githubaction.Inputs;
+import io.quarkiverse.githubapp.event.PullRequest;
+import io.quarkus.logging.Log;
+import map.gpx.DefaultGpxMapper;
+import map.gpx.GpxStyler;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -15,20 +17,17 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.kohsuke.github.GHEventPayload;
 
-import io.quarkiverse.githubaction.Action;
-import io.quarkiverse.githubaction.Commands;
-import io.quarkiverse.githubaction.Context;
-import io.quarkiverse.githubaction.Inputs;
-import io.quarkiverse.githubapp.event.PullRequest;
-import io.quarkus.logging.Log;
-import map.gpx.DefaultGpxMapper;
-import map.gpx.GpxStyler;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.Set;
 
 public class MapsCreation {
     @Action("Generate maps")
     void generateMaps(Inputs inputs, Context context,
-            @PullRequest GHEventPayload.PullRequest pullRequestPayload, Commands commands)
-            throws IOException, InvalidRemoteException, TransportException, GitAPIException {
+                      @PullRequest GHEventPayload.PullRequest pullRequestPayload, Commands commands)
+            throws IOException, GitAPIException {
         String executionFolder = inputs.getRequired("content-path");
         String token = inputs.getRequired("github-token");
         String username = inputs.getRequired("github-username");
@@ -64,7 +63,7 @@ public class MapsCreation {
             } else {
                 commands.warning("No changes to commit, skipping git commit and push.");
             }
-            pullRequestPayload.getPullRequest().updateBranch();
+            git.pull().call();
             pullRequestPayload.getPullRequest().merge("Pull request closed successfully");
         }
     }
