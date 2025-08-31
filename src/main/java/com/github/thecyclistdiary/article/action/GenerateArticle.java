@@ -16,10 +16,7 @@ import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
-import org.kohsuke.github.GHEventPayload;
-import org.kohsuke.github.GHIssue;
-import org.kohsuke.github.GHIssueStateReason;
-import org.kohsuke.github.GHRepository;
+import org.kohsuke.github.*;
 
 import com.fasterxml.jackson.annotation.ObjectIdGenerators.UUIDGenerator;
 import com.github.thecyclistdiary.NoLabelFoundException;
@@ -168,7 +165,7 @@ public class GenerateArticle {
                 .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
                 .call();
         commands.echo(String.format("Modifications pushed - Commit message : %s", commitMessage));
-        repository.createPullRequest(
+        GHPullRequest pullRequest = repository.createPullRequest(
                 String.format("article/%s", article.title()),
                 newBranch,
                 "main",
