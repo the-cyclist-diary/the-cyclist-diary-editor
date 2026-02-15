@@ -97,10 +97,7 @@ public class PolylineGeneratorCommand implements QuarkusApplication {
         }
 
         var gpxToMapWalker = new GitAwareGpxToMapWalker(modifiedGpxFiles, polylineService, fullScan);
-        int[] processedCount = {0};
-        
-        Files.walkFileTree(contentPath, gpxToMapWalker);
-        
+        Files.walkFileTree(contentPath, gpxToMapWalker);    
         Log.info("=".repeat(80));
         Log.info("Generation complete!");
         Log.info("=".repeat(80));

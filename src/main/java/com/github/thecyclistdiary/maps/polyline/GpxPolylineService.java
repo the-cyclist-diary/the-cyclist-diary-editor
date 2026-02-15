@@ -148,6 +148,20 @@ public class GpxPolylineService {
      */
     public EncodedPolyline encode(Path gpxFile) throws IOException {
         List<GpxPoint> points = parseGpx(gpxFile);
+        return encode(points);
+    }
+    
+    /**
+     * Encode une liste de points GPX en polyline avec altitudes.
+     * Utilisé pour agréger plusieurs fichiers GPX en un seul tracé.
+     * 
+     * @param points Liste des points GPX
+     * @return EncodedPolyline contenant la polyline et les altitudes encodées
+     */
+    public EncodedPolyline encode(List<GpxPoint> points) {
+        if (points == null || points.isEmpty()) {
+            throw new IllegalArgumentException("La liste de points ne peut pas être vide");
+        }
         
         // Encoder la polyline standard Google puis la convertir en Base64 pour éviter les caractères problématiques en JSON
         String polyline = PolylineEncoder.encode(points);
