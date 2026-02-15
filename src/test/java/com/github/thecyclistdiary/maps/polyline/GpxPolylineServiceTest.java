@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,16 +42,17 @@ class GpxPolylineServiceTest {
     @Test
     void it_should_encode_gpx_file_to_polyline() throws IOException {
         // Soit un fichier GPX test
-        Path gpxFile = Path.of("src/test/resources/test-track.gpx");
+        Path gpxFile = Path.of("src/test/resources/big-test-track.gpx");
         
         // Lorsqu'on encode le fichier
         EncodedPolyline encoded = service.encode(gpxFile);
         
         // Elle doit produire une polyline encodée avec les bonnes métadonnées
         assertThat(encoded.path()).isNotEmpty();
+        assertThat(encoded.pathEncoding()).isEqualTo("base64-polyline");
         assertThat(encoded.elevations()).isNotEmpty();
         assertThat(encoded.elevationEncoding()).isEqualTo("base64-int16-decimeters");
-        assertThat(encoded.pointCount()).isEqualTo(5);
+        assertThat(encoded.pointCount()).isEqualTo(9757);
         assertThat(encoded.metadata()).isNotNull();
     }
     
@@ -62,7 +64,10 @@ class GpxPolylineServiceTest {
         
         // Lorsqu'on encode puis décode
         EncodedPolyline encoded = service.encode(gpxFile);
-        List<GpxPoint> decodedLatLon = decodePolyline(encoded.path());
+        
+        // Décoder d'abord la Base64, puis la polyline
+        String polylineDecoded = new String(Base64.getDecoder().decode(encoded.path()));
+        List<GpxPoint> decodedLatLon = decodePolyline(polylineDecoded);
         double[] decodedElevations = ElevationEncoder.decode(encoded.elevations());
         
         // Elle doit retrouver les coordonnées avec la précision attendue
@@ -98,24 +103,27 @@ class GpxPolylineServiceTest {
         
         // Vérifier la structure JSON
         assertThat(json).contains("\"path\":");
+        assertThat(json).contains("\"pathEncoding\": \"base64-polyline\"");
         assertThat(json).contains("\"elevations\":");
         assertThat(json).contains("\"elevationEncoding\": \"base64-int16-decimeters\"");
         assertThat(json).contains("\"pointCount\": 5");
     }
     
     @Test
-    void it_should_encode_and_save_in_one_call(@TempDir Path tempDir) throws IOException {
+    void it_should_calculate_metadata_correctly() throws IOException {
         // Soit un fichier GPX test
         Path gpxFile = Path.of("src/test/resources/test-track.gpx");
-        Path outputPath = tempDir.resolve("track.polyline.json");
+        List<GpxPoint> points = service.parseGpx(gpxFile);
         
-        // Lorsqu'on encode et sauvegarde en un seul appel
-        service.encodeAndSave(gpxFile, outputPath);
+        // Lorsqu'on calcule les métadonnées
+        TrackMetadata metadata = service.calculateMetadata(points);
         
-        // Elle doit créer le fichier JSON
-        assertThat(outputPath).exists();
-        String json = Files.readString(outputPath);
-        assertThat(json).contains("\"pointCount\": 5");
+        // Elle doit calculer distance, dénivelé, altitude min/max
+        assertThat(metadata.distanceKm()).isGreaterThan(0);
+        assertThat(metadata.elevationGainM()).isCloseTo(26.1, within(0.5));
+        assertThat(metadata.elevationLossM()).isCloseTo(11.0, within(0.5));
+        assertThat(metadata.minElevationM()).isCloseTo(100.0, within(0.1));
+        assertThat(metadata.maxElevationM()).isCloseTo(120.8, within(0.1));
     }
     
     @Test
@@ -159,23 +167,6 @@ class GpxPolylineServiceTest {
     }
     
     @Test
-    void it_should_calculate_metadata_correctly() throws IOException {
-        // Soit un fichier GPX test
-        Path gpxFile = Path.of("src/test/resources/test-track.gpx");
-        List<GpxPoint> points = service.parseGpx(gpxFile);
-        
-        // Lorsqu'on calcule les métadonnées
-        TrackMetadata metadata = service.calculateMetadata(points);
-        
-        // Elle doit calculer distance, dénivelé, altitude min/max
-        assertThat(metadata.distanceKm()).isGreaterThan(0);
-        assertThat(metadata.elevationGainM()).isCloseTo(26.1, within(0.5)); // 110.5-100 + 120.8-105.2 + 0 (dernier point descend)
-        assertThat(metadata.elevationLossM()).isCloseTo(11.0, within(0.5)); // 105.2-110.5 + 115.3-120.8
-        assertThat(metadata.minElevationM()).isCloseTo(100.0, within(0.1));
-        assertThat(metadata.maxElevationM()).isCloseTo(120.8, within(0.1));
-    }
-    
-    @Test
     void it_should_calculate_time_metadata_when_timestamps_available() throws IOException {
         // Soit un fichier GPX test avec timestamps
         Path gpxFile = Path.of("src/test/resources/test-track.gpx");
@@ -186,7 +177,7 @@ class GpxPolylineServiceTest {
         
         // Elle doit calculer la durée et la vitesse moyenne
         assertThat(metadata.hasTimeData()).isTrue();
-        assertThat(metadata.durationSeconds()).isEqualTo(7200L); // 2 heures
+        assertThat(metadata.durationSeconds()).isEqualTo(7200L); // 2h
         assertThat(metadata.formatDuration()).isEqualTo("02:00:00");
         assertThat(metadata.startTime()).isNotNull();
         assertThat(metadata.endTime()).isNotNull();

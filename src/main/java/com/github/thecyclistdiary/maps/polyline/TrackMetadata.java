@@ -1,6 +1,7 @@
 package com.github.thecyclistdiary.maps.polyline;
 
 import java.time.ZonedDateTime;
+import java.util.Locale;
 
 /**
  * Métadonnées calculées pour un tracé GPX.
@@ -58,5 +59,32 @@ public record TrackMetadata(
         long minutes = (durationSeconds % 3600) / 60;
         long seconds = durationSeconds % 60;
         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+    }    
+    /**
+     * Convertit les métadonnées en format JSON.
+     */
+    public String toJson() {
+        var baseMetadata = String.format(Locale.US, """
+            {
+                "distanceKm": %.3f,
+                "elevationGainM": %.1f,
+                "elevationLossM": %.1f,
+                "minElevationM": %.1f,
+                "maxElevationM": %.1f""",
+                    distanceKm, elevationGainM, elevationLossM, minElevationM, maxElevationM);
+        
+        if (hasTimeData()) {
+            return baseMetadata + String.format(Locale.US, """
+                ,
+                "durationSeconds": %d,
+                "durationFormatted": "%s",
+                "startTime": "%s",
+                "endTime": "%s",
+                "averageSpeedKmh": %.2f
+              }""",
+                    durationSeconds, formatDuration(), startTime, endTime, averageSpeedKmh);
+        }
+        
+        return baseMetadata + "\n  }";
     }
 }

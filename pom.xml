@@ -54,11 +54,6 @@
             <version>7.0.0.202409031743-r</version>
         </dependency>
         <dependency>
-            <groupId>io.github.ibethus.gpxtomap</groupId>
-            <artifactId>gpx-to-map</artifactId>
-            <version>1.4.0</version>
-        </dependency>
-        <dependency>
             <groupId>io.jenetics</groupId>
             <artifactId>jpx</artifactId>
             <version>3.2.0</version>

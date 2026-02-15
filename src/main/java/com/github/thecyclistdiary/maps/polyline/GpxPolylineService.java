@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -17,8 +18,9 @@ import java.util.List;
  */
 public class GpxPolylineService {
     
+    private static final String PATH_ENCODING_FORMAT = "base64-polyline";
     private static final String ELEVATION_ENCODING_FORMAT = "base64-int16-decimeters";
-    private static final double EARTH_RADIUS_KM = 6371.0; // Rayon de la Terre en km
+    private static final double EARTH_RADIUS_KM = 6371.0;
     
     /**
      * Parse un fichier GPX et extrait tous les track points.
@@ -77,18 +79,13 @@ public class GpxPolylineService {
         for (int i = 0; i < points.size(); i++) {
             GpxPoint point = points.get(i);
             
-            // Altitude min/max
             minElevation = Math.min(minElevation, point.elevation());
             maxElevation = Math.max(maxElevation, point.elevation());
             
-            // Calculer distance et dénivelé entre points consécutifs
             if (i > 0) {
                 GpxPoint prevPoint = points.get(i - 1);
-                
-                // Distance (formule de Haversine)
                 totalDistance += calculateDistance(prevPoint, point);
                 
-                // Dénivelé
                 double elevationDiff = point.elevation() - prevPoint.elevation();
                 if (elevationDiff > 0) {
                     elevationGain += elevationDiff;
@@ -96,21 +93,19 @@ public class GpxPolylineService {
                     elevationLoss += Math.abs(elevationDiff);
                 }
                 
-                // Temps de fin
                 if (point.time() != null) {
                     endTime = point.time();
                 }
             }
         }
         
-        // Calculer durée et vitesse si timestamps disponibles
         Long durationSeconds = null;
         Double averageSpeedKmh = null;
         
         if (startTime != null && endTime != null) {
             durationSeconds = Duration.between(startTime, endTime).getSeconds();
             if (durationSeconds > 0) {
-                averageSpeedKmh = (totalDistance / durationSeconds) * 3600; // km/h
+                averageSpeedKmh = (totalDistance / durationSeconds) * 3600;
             }
         }
         
@@ -128,9 +123,7 @@ public class GpxPolylineService {
     }
     
     /**
-     * Calcule la distance entre deux points en utilisant la formule de Haversine.
-     * 
-     * @return Distance en kilomètres
+     * Calcule la distance entre deux points avec la formule de Haversine.
      */
     private double calculateDistance(GpxPoint p1, GpxPoint p2) {
         double lat1Rad = Math.toRadians(p1.lat());
@@ -143,7 +136,6 @@ public class GpxPolylineService {
                 * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
         
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        
         return EARTH_RADIUS_KM * c;
     }
     
@@ -157,29 +149,21 @@ public class GpxPolylineService {
     public EncodedPolyline encode(Path gpxFile) throws IOException {
         List<GpxPoint> points = parseGpx(gpxFile);
         
-        String encodedPath = PolylineEncoder.encode(points);
+        // Encoder la polyline standard Google puis la convertir en Base64 pour éviter les caractères problématiques en JSON
+        String polyline = PolylineEncoder.encode(points);
+        String encodedPath = Base64.getEncoder().encodeToString(polyline.getBytes());
+        
         String encodedElevations = ElevationEncoder.encode(points);
         TrackMetadata metadata = calculateMetadata(points);
         
         return new EncodedPolyline(
                 encodedPath,
+                PATH_ENCODING_FORMAT,
                 encodedElevations,
                 ELEVATION_ENCODING_FORMAT,
                 points.size(),
                 metadata
         );
-    }
-    
-    /**
-     * Encode un fichier GPX et sauvegarde le résultat en JSON.
-     * 
-     * @param gpxFile Chemin vers le fichier GPX
-     * @param outputPath Chemin de sortie pour le fichier JSON
-     * @throws IOException Si le fichier ne peut pas être lu ou écrit
-     */
-    public void encodeAndSave(Path gpxFile, Path outputPath) throws IOException {
-        EncodedPolyline encoded = encode(gpxFile);
-        saveAsJson(encoded, outputPath);
     }
     
     /**
