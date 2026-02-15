@@ -51,6 +51,7 @@ class GpxPolylineServiceTest {
         assertThat(encoded.elevations()).isNotEmpty();
         assertThat(encoded.elevationEncoding()).isEqualTo("base64-int16-decimeters");
         assertThat(encoded.pointCount()).isEqualTo(5);
+        assertThat(encoded.metadata()).isNotNull();
     }
     
     @Test
@@ -155,6 +156,63 @@ class GpxPolylineServiceTest {
         } finally {
             Files.deleteIfExists(tempFile);
         }
+    }
+    
+    @Test
+    void it_should_calculate_metadata_correctly() throws IOException {
+        // Soit un fichier GPX test
+        Path gpxFile = Path.of("src/test/resources/test-track.gpx");
+        List<GpxPoint> points = service.parseGpx(gpxFile);
+        
+        // Lorsqu'on calcule les métadonnées
+        TrackMetadata metadata = service.calculateMetadata(points);
+        
+        // Elle doit calculer distance, dénivelé, altitude min/max
+        assertThat(metadata.distanceKm()).isGreaterThan(0);
+        assertThat(metadata.elevationGainM()).isCloseTo(26.1, within(0.5)); // 110.5-100 + 120.8-105.2 + 0 (dernier point descend)
+        assertThat(metadata.elevationLossM()).isCloseTo(11.0, within(0.5)); // 105.2-110.5 + 115.3-120.8
+        assertThat(metadata.minElevationM()).isCloseTo(100.0, within(0.1));
+        assertThat(metadata.maxElevationM()).isCloseTo(120.8, within(0.1));
+    }
+    
+    @Test
+    void it_should_calculate_time_metadata_when_timestamps_available() throws IOException {
+        // Soit un fichier GPX test avec timestamps
+        Path gpxFile = Path.of("src/test/resources/test-track.gpx");
+        
+        // Lorsqu'on encode le fichier
+        EncodedPolyline encoded = service.encode(gpxFile);
+        TrackMetadata metadata = encoded.metadata();
+        
+        // Elle doit calculer la durée et la vitesse moyenne
+        assertThat(metadata.hasTimeData()).isTrue();
+        assertThat(metadata.durationSeconds()).isEqualTo(7200L); // 2 heures
+        assertThat(metadata.formatDuration()).isEqualTo("02:00:00");
+        assertThat(metadata.startTime()).isNotNull();
+        assertThat(metadata.endTime()).isNotNull();
+        assertThat(metadata.averageSpeedKmh()).isGreaterThan(0);
+    }
+    
+    @Test
+    void it_should_include_metadata_in_json(@TempDir Path tempDir) throws IOException {
+        // Soit un fichier GPX encodé
+        Path gpxFile = Path.of("src/test/resources/test-track.gpx");
+        EncodedPolyline encoded = service.encode(gpxFile);
+        
+        // Lorsqu'on sauvegarde en JSON
+        Path outputPath = tempDir.resolve("output.polyline.json");
+        service.saveAsJson(encoded, outputPath);
+        
+        // Elle doit inclure les métadonnées dans le JSON
+        String json = Files.readString(outputPath);
+        assertThat(json).contains("\"metadata\":");
+        assertThat(json).contains("\"distanceKm\":");
+        assertThat(json).contains("\"elevationGainM\":");
+        assertThat(json).contains("\"elevationLossM\":");
+        assertThat(json).contains("\"minElevationM\":");
+        assertThat(json).contains("\"maxElevationM\":");
+        assertThat(json).contains("\"durationSeconds\":");
+        assertThat(json).contains("\"averageSpeedKmh\":");
     }
     
     /**

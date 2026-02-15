@@ -6,6 +6,9 @@ import io.quarkus.logging.Log;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +18,7 @@ import java.util.List;
 public class GpxPolylineService {
     
     private static final String ELEVATION_ENCODING_FORMAT = "base64-int16-decimeters";
+    private static final double EARTH_RADIUS_KM = 6371.0; // Rayon de la Terre en km
     
     /**
      * Parse un fichier GPX et extrait tous les track points.
@@ -36,8 +40,11 @@ public class GpxPolylineService {
                     double elevation = wayPoint.getElevation()
                             .map(e -> e.doubleValue())
                             .orElse(0.0);
+                    ZonedDateTime time = wayPoint.getTime()
+                            .map(instant -> instant.atZone(ZoneId.of("UTC")))
+                            .orElse(null);
                     
-                    points.add(new GpxPoint(lat, lon, elevation));
+                    points.add(new GpxPoint(lat, lon, elevation, time));
                 });
             });
         });
@@ -48,6 +55,96 @@ public class GpxPolylineService {
         
         Log.debug("Parsed %d points from GPX file: %s".formatted(points.size(), gpxFile.getFileName()));
         return points;
+    }
+    
+    /**
+     * Calcule les métadonnées d'un tracé GPX.
+     */
+    public TrackMetadata calculateMetadata(List<GpxPoint> points) {
+        if (points == null || points.isEmpty()) {
+            throw new IllegalArgumentException("La liste de points ne peut pas être vide");
+        }
+        
+        double totalDistance = 0.0;
+        double elevationGain = 0.0;
+        double elevationLoss = 0.0;
+        double minElevation = Double.MAX_VALUE;
+        double maxElevation = Double.MIN_VALUE;
+        
+        ZonedDateTime startTime = points.get(0).time();
+        ZonedDateTime endTime = null;
+        
+        for (int i = 0; i < points.size(); i++) {
+            GpxPoint point = points.get(i);
+            
+            // Altitude min/max
+            minElevation = Math.min(minElevation, point.elevation());
+            maxElevation = Math.max(maxElevation, point.elevation());
+            
+            // Calculer distance et dénivelé entre points consécutifs
+            if (i > 0) {
+                GpxPoint prevPoint = points.get(i - 1);
+                
+                // Distance (formule de Haversine)
+                totalDistance += calculateDistance(prevPoint, point);
+                
+                // Dénivelé
+                double elevationDiff = point.elevation() - prevPoint.elevation();
+                if (elevationDiff > 0) {
+                    elevationGain += elevationDiff;
+                } else {
+                    elevationLoss += Math.abs(elevationDiff);
+                }
+                
+                // Temps de fin
+                if (point.time() != null) {
+                    endTime = point.time();
+                }
+            }
+        }
+        
+        // Calculer durée et vitesse si timestamps disponibles
+        Long durationSeconds = null;
+        Double averageSpeedKmh = null;
+        
+        if (startTime != null && endTime != null) {
+            durationSeconds = Duration.between(startTime, endTime).getSeconds();
+            if (durationSeconds > 0) {
+                averageSpeedKmh = (totalDistance / durationSeconds) * 3600; // km/h
+            }
+        }
+        
+        return new TrackMetadata(
+            totalDistance,
+            elevationGain,
+            elevationLoss,
+            minElevation,
+            maxElevation,
+            durationSeconds,
+            startTime,
+            endTime,
+            averageSpeedKmh
+        );
+    }
+    
+    /**
+     * Calcule la distance entre deux points en utilisant la formule de Haversine.
+     * 
+     * @return Distance en kilomètres
+     */
+    private double calculateDistance(GpxPoint p1, GpxPoint p2) {
+        double lat1Rad = Math.toRadians(p1.lat());
+        double lat2Rad = Math.toRadians(p2.lat());
+        double deltaLat = Math.toRadians(p2.lat() - p1.lat());
+        double deltaLon = Math.toRadians(p2.lon() - p1.lon());
+        
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(lat1Rad) * Math.cos(lat2Rad)
+                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        
+        return EARTH_RADIUS_KM * c;
     }
     
     /**
@@ -62,12 +159,14 @@ public class GpxPolylineService {
         
         String encodedPath = PolylineEncoder.encode(points);
         String encodedElevations = ElevationEncoder.encode(points);
+        TrackMetadata metadata = calculateMetadata(points);
         
         return new EncodedPolyline(
                 encodedPath,
                 encodedElevations,
                 ELEVATION_ENCODING_FORMAT,
-                points.size()
+                points.size(),
+                metadata
         );
     }
     

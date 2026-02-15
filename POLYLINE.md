@@ -13,11 +13,23 @@ Pour chaque fichier `.gpx`, un fichier `.polyline.json` est généré avec la st
   "path": "_p~iF~ps|U_ulLnnqC_mqNvxq`@",
   "elevations": "A+QDvADwQDxQ",
   "elevationEncoding": "base64-int16-decimeters",
-  "pointCount": 5
+  "pointCount": 5,
+  "metadata": {
+    "distanceKm": 12.456,
+    "elevationGainM": 345.6,
+    "elevationLossM": 123.4,
+    "minElevationM": 100.0,
+    "maxElevationM": 445.6,
+    "durationSeconds": 7200,
+    "durationFormatted": "02:00:00",
+    "startTime": "2024-01-15T10:00:00Z",
+    "endTime": "2024-01-15T12:00:00Z",
+    "averageSpeedKmh": 6.23
+  }
 }
 ```
 
-### Champs
+### Champs principaux
 
 - **`path`** : Polyline encodée au format Google standard (latitude/longitude)
   - Compatible avec Google Maps, Leaflet, Mapbox, OpenLayers
@@ -31,6 +43,19 @@ Pour chaque fichier `.gpx`, un fichier `.polyline.json` est généré avec la st
 - **`elevationEncoding`** : Format d'encodage (toujours `"base64-int16-decimeters"`)
   
 - **`pointCount`** : Nombre de points dans la polyline
+
+### Métadonnées du tracé
+
+- **`distanceKm`** : Distance totale en kilomètres (calculée avec formule de Haversine)
+- **`elevationGainM`** : Dénivelé positif cumulé en mètres (D+)
+- **`elevationLossM`** : Dénivelé négatif cumulé en mètres (D-)
+- **`minElevationM`** : Altitude minimale en mètres
+- **`maxElevationM`** : Altitude maximale en mètres
+- **`durationSeconds`** : Durée totale en secondes (si timestamps disponibles dans le GPX)
+- **`durationFormatted`** : Durée formatée au format HH:MM:SS (si disponible)
+- **`startTime`** : Date/heure de début (ISO 8601, si disponible)
+- **`endTime`** : Date/heure de fin (ISO 8601, si disponible)
+- **`averageSpeedKmh`** : Vitesse moyenne en km/h (si durée disponible)
 
 ## Taille des données
 
@@ -110,11 +135,20 @@ const profile = path.map(([lat, lon], i) => ({
 
 ### Classes principales
 
-- **`GpxPoint`** : Record pour un point GPX (lat, lon, elevation)
-- **`EncodedPolyline`** : Record pour une polyline encodée
+- **`GpxPoint`** : Record pour un point GPX (lat, lon, elevation, time optionnel)
+- **`EncodedPolyline`** : Record pour une polyline encodée avec métadonnées
+- **`TrackMetadata`** : Record contenant les statistiques du tracé (distance, dénivelé, durée, etc.)
 - **`PolylineEncoder`** : Encode lat/lon au format Google Polyline
 - **`ElevationEncoder`** : Encode les altitudes en Base64 Int16Array
-- **`GpxPolylineService`** : Service principal pour parser GPX et générer polylines
+- **`GpxPolylineService`** : Service principal pour parser GPX, calculer métadonnées et générer polylines
+
+### Calculs effectués
+
+- **Distance** : Formule de Haversine pour calculer la distance entre points GPS
+- **Dénivelé** : Cumul des différences d'altitude positives (D+) et négatives (D-)
+- **Altitude min/max** : Recherche des valeurs extrêmes dans le tracé
+- **Durée** : Différence entre premier et dernier timestamp (si disponible)
+- **Vitesse moyenne** : Distance / durée (si timestamps disponibles)
 
 ### Intégration
 
@@ -134,8 +168,9 @@ Exécuter les tests :
 Les tests couvrent :
 - Encodage/décodage de polylines
 - Encodage/décodage d'altitudes
-- Parsing de fichiers GPX
-- Cycle complet GPX → JSON
+- Parsing de fichiers GPX avec et sans timestamps
+- Calcul de métadonnées (distance, dénivelé, durée)
+- Cycle complet GPX → JSON avec vérification des valeurs
 - Cas limites (listes vides, coordonnées négatives, hautes altitudes)
 
 ## Dépendances
@@ -149,5 +184,6 @@ Les tests couvrent :
 ✅ **Compression optimale** : ~6-7 KB pour 1000 points vs ~50 KB en JSON  
 ✅ **Décodage simple** : Librairies existantes + 10 lignes de JavaScript  
 ✅ **Précision adaptée** : 1e5 pour coordonnées, 1e1 pour altitude  
+✅ **Métadonnées complètes** : Distance, dénivelé, durée, vitesse calculés automatiquement  
 ✅ **Extensible** : Format facilement extensible (timestamps, cadence, rythme cardiaque)  
-✅ **Tests complets** : 18 tests unitaires couvrant tous les cas d'usage
+✅ **Tests complets** : 21 tests unitaires couvrant tous les cas d'usage
