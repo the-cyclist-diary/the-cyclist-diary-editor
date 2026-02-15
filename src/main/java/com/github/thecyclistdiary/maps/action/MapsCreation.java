@@ -1,5 +1,6 @@
 package com.github.thecyclistdiary.maps.action;
 
+import com.github.thecyclistdiary.maps.polyline.GpxPolylineService;
 import io.quarkiverse.githubaction.Action;
 import io.quarkiverse.githubaction.Commands;
 import io.quarkiverse.githubaction.Context;
@@ -48,7 +49,8 @@ public class MapsCreation {
                     .withChartHeight(100)
                     .withGpxStyler(gpxStyler)
                     .build();
-            var gpxToMapWalker = new GitAwareGpxToMapWalker(modifiedGpxFiles, gpxMapper);
+            GpxPolylineService polylineService = new GpxPolylineService();
+            var gpxToMapWalker = new GitAwareGpxToMapWalker(modifiedGpxFiles, gpxMapper, polylineService);
             Path completeExecutionFolder = repoDirectory.resolve(executionFolder);
             Log.info("Starting analysis of content folder %s".formatted(completeExecutionFolder));
             Files.walkFileTree(completeExecutionFolder, gpxToMapWalker);
