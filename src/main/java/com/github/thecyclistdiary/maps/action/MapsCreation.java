@@ -1,12 +1,11 @@
 package com.github.thecyclistdiary.maps.action;
 
-import com.github.thecyclistdiary.maps.polyline.GpxPolylineService;
-import io.quarkiverse.githubaction.Action;
-import io.quarkiverse.githubaction.Commands;
-import io.quarkiverse.githubaction.Context;
-import io.quarkiverse.githubaction.Inputs;
-import io.quarkiverse.githubapp.event.PullRequest;
-import io.quarkus.logging.Log;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.Set;
+
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -15,11 +14,14 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.kohsuke.github.GHEventPayload;
 import org.kohsuke.github.GHPullRequest;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.util.Set;
+import com.github.thecyclistdiary.maps.polyline.GpxPolylineService;
+
+import io.quarkiverse.githubaction.Action;
+import io.quarkiverse.githubaction.Commands;
+import io.quarkiverse.githubaction.Context;
+import io.quarkiverse.githubaction.Inputs;
+import io.quarkiverse.githubapp.event.PullRequest;
+import io.quarkus.logging.Log;
 
 public class MapsCreation {
     @Action("Generate maps")
@@ -60,19 +62,19 @@ public class MapsCreation {
                 Log.info("Changes committed successfully");
                 commands.notice("Changes committed and pushed to the repository.");
                 GHPullRequest pr = pullRequestPayload.getPullRequest();
-                try {
-                    Log.info("Updating PR #%d branch with base...".formatted(pr.getNumber()));
-                    pr.updateBranch();
-                    Log.info("PR #%d branch updated successfully".formatted(pr.getNumber()));
-                    
-                    Log.info("Merging article PR #%d...".formatted(pr.getNumber()));
-                    pr.merge("Maps generated successfully", pr.getHead().getSha(), GHPullRequest.MergeMethod.SQUASH);
-                    commands.notice("Pull Request #%d merged successfully!".formatted(pr.getNumber()));
-                    Log.info("PR #%d merged".formatted(pr.getNumber()));
-                } catch (IOException e) {
-                    commands.error("Failed to merge PR: " + e.getMessage());
-                    Log.error("Failed to merge PR #%d".formatted(pr.getNumber()), e);
-                }
+
+                // Rafraîchir la PR pour obtenir le dernier SHA après notre push
+                Log.info("Refreshing PR #%d data...".formatted(pr.getNumber()));
+                pr.refresh();
+
+                Log.info("Updating PR #%d branch with base...".formatted(pr.getNumber()));
+                pr.updateBranch();
+                Log.info("PR #%d branch updated successfully".formatted(pr.getNumber()));
+
+                // Rafraîchir à nouveau après updateBranch
+                pr.refresh();
+                pr.merge("Maps generated successfully", pr.getHead().getSha(), GHPullRequest.MergeMethod.SQUASH);
+                Log.info("PR #%d merged".formatted(pr.getNumber()));
 
             } else {
                 commands.warning("No changes to commit, skipping git commit and push.");
