@@ -16,9 +16,12 @@ import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
-import org.kohsuke.github.*;
+import org.kohsuke.github.GHEventPayload;
+import org.kohsuke.github.GHIssue;
+import org.kohsuke.github.GHIssueStateReason;
+import org.kohsuke.github.GHPullRequest;
+import org.kohsuke.github.GHRepository;
 
-import com.fasterxml.jackson.annotation.ObjectIdGenerators.UUIDGenerator;
 import com.github.thecyclistdiary.NoLabelFoundException;
 import com.github.thecyclistdiary.article.dto.Article;
 import com.github.thecyclistdiary.article.dto.ArticleGallery;

@@ -1,0 +1,18 @@
+{
+  "path": "_p~iF~ps|U_ulLnnqC_mqNvxq`@",
+  "elevations": "A+QDvADwQDxQ",
+  "elevationEncoding": "base64-int16-decimeters",
+  "pointCount": 5,
+  "metadata": {
+    "distanceKm": 12.456,
+    "elevationGainM": 345.6,
+    "elevationLossM": 123.4,
+    "minElevationM": 100.0,
+    "maxElevationM": 445.6,
+    "durationSeconds": 7200,
+    "durationFormatted": "02:00:00",
+    "startTime": "2024-01-15T10:00:00Z",
+    "endTime": "2024-01-15T12:00:00Z",
+    "averageSpeedKmh": 6.23
+  }
+}

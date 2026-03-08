@@ -9,6 +9,10 @@ inputs:
     required: true
   content-path:
     description: 'Path to the content folder where the maps will be generated'
+  full-scan:
+    description: 'Generate polylines for ALL GPX files (not just modified ones)'
+    required: false
+    default: 'false'
   action:
     description: 'Name of the action (if named)'
     required: false
