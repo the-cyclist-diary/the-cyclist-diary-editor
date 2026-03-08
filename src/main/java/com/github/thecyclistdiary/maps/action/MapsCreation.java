@@ -78,48 +78,48 @@ public class MapsCreation {
                 commitChanges(git, username, token);
                 Log.info("Changes committed successfully");
                 commands.notice("Changes committed and pushed to the repository.");
-
-                Log.info("Merging PR #%d...".formatted(pr.getNumber()));
-                // After a push, GitHub needs time to recompute mergeability; poll until known
-                Boolean mergeable = null;
-                for (int attempt = 0; attempt < 10 && !Boolean.TRUE.equals(mergeable); attempt++) {
-                    if (attempt > 0) {
-                        try {
-                            Thread.sleep(3000);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            throw new IOException("Interrupted while waiting for PR mergeability", e);
-                        }
-                    }
-                    pr.refresh();
-                    mergeable = pr.getMergeable();
-                    Log.info("PR #%d mergeable state: %s (attempt %d)".formatted(pr.getNumber(), mergeable, attempt + 1));
-                }
-                if (!Boolean.TRUE.equals(mergeable)) {
-                    throw new IOException("PR #%d is not mergeable after waiting (state: %s)".formatted(pr.getNumber(), mergeable));
-                }
-                
-                // Wait a bit more after mergeability is confirmed to ensure GitHub is ready
-                Log.info("PR is mergeable, waiting 10 seconds before merge to ensure GitHub is ready...");
-                try {
-                    Thread.sleep(10000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new IOException("Interrupted while waiting before merge", e);
-                }
-                
-                // Refresh PR one more time to get the updated HEAD SHA after our push
-                pr.refresh();
-                String currentHeadSha = pr.getHead().getSha();
-                Log.info("Current HEAD SHA before merge: %s".formatted(currentHeadSha));
-                
-                pr.merge("Maps generated successfully", currentHeadSha, GHPullRequest.MergeMethod.SQUASH);
-                commands.notice("Pull Request #%d merged successfully!".formatted(pr.getNumber()));
-                Log.info("PR #%d merged successfully".formatted(pr.getNumber()));
-
             } else {
                 commands.warning("No changes to commit, skipping git commit and push.");
             }
+
+            Log.info("Merging PR #%d...".formatted(pr.getNumber()));
+            // After a push, GitHub needs time to recompute mergeability; poll until known
+            Boolean mergeable = null;
+            for (int attempt = 0; attempt < 10 && !Boolean.TRUE.equals(mergeable); attempt++) {
+                if (attempt > 0) {
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("Interrupted while waiting for PR mergeability", e);
+                    }
+                }
+                pr.refresh();
+                mergeable = pr.getMergeable();
+                Log.info("PR #%d mergeable state: %s (attempt %d)".formatted(pr.getNumber(), mergeable, attempt + 1));
+            }
+            if (!Boolean.TRUE.equals(mergeable)) {
+                throw new IOException(
+                        "PR #%d is not mergeable after waiting (state: %s)".formatted(pr.getNumber(), mergeable));
+            }
+
+            // Wait a bit more after mergeability is confirmed to ensure GitHub is ready
+            Log.info("PR is mergeable, waiting 10 seconds before merge to ensure GitHub is ready...");
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting before merge", e);
+            }
+
+            // Refresh PR one more time to get the updated HEAD SHA after our push
+            pr.refresh();
+            String currentHeadSha = pr.getHead().getSha();
+            Log.info("Current HEAD SHA before merge: %s".formatted(currentHeadSha));
+
+            pr.merge("Maps generated successfully", currentHeadSha, GHPullRequest.MergeMethod.SQUASH);
+            commands.notice("Pull Request #%d merged successfully!".formatted(pr.getNumber()));
+            Log.info("PR #%d merged successfully".formatted(pr.getNumber()));
         }
     }
 
