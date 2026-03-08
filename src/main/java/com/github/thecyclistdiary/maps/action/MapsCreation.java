@@ -13,6 +13,7 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.kohsuke.github.GHEventPayload;
+import org.kohsuke.github.GHPullRequest;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,7 +24,7 @@ import java.util.Set;
 public class MapsCreation {
     @Action("Generate maps")
     void generateMaps(Inputs inputs, Context context,
-                      @PullRequest GHEventPayload.PullRequest pullRequestPayload, Commands commands)
+            @PullRequest GHEventPayload.PullRequest pullRequestPayload, Commands commands)
             throws IOException, GitAPIException {
         String executionFolder = inputs.getRequired("content-path");
         String token = inputs.getRequired("github-token");
@@ -42,7 +43,7 @@ public class MapsCreation {
             GpxPolylineService polylineService = new GpxPolylineService();
             var gpxToMapWalker = new GitAwareGpxToMapWalker(modifiedGpxFiles, polylineService, fullScan);
             Path completeExecutionFolder = repoDirectory.resolve(executionFolder);
-            
+
             if (fullScan) {
                 Log.info("Starting FULL SCAN of content folder %s".formatted(completeExecutionFolder));
             } else {
@@ -50,12 +51,23 @@ public class MapsCreation {
             }
             Files.walkFileTree(completeExecutionFolder, gpxToMapWalker);
             Log.info("Done analysis of content folder");
-            
+
             if (fullScan || !modifiedGpxFiles.isEmpty()) {
                 Log.info("Committing to git repository...");
                 commitChanges(git, username, token);
                 Log.info("Changes committed successfully");
                 commands.notice("Changes committed and pushed to the repository.");
+                GHPullRequest pr = pullRequestPayload.getPullRequest();
+                try {
+                    Log.info("Merging article PR #%d...".formatted(pr.getNumber()));
+                    pr.merge("Maps generated successfully", pr.getHead().getSha(), GHPullRequest.MergeMethod.SQUASH);
+                    commands.notice("Pull Request #%d merged successfully!".formatted(pr.getNumber()));
+                    Log.info("PR #%d merged".formatted(pr.getNumber()));
+                } catch (IOException e) {
+                    commands.error("Failed to merge PR: " + e.getMessage());
+                    Log.error("Failed to merge PR #%d".formatted(pr.getNumber()), e);
+                }
+
             } else {
                 commands.warning("No changes to commit, skipping git commit and push.");
             }
