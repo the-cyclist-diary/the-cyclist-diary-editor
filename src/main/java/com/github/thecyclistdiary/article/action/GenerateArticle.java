@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -75,7 +78,6 @@ public class GenerateArticle {
                 logErrorAndExit(commands, "L'issue n'a pas de label !", e);
             }
         }
-        commands.appendJobSummary(String.format(":wave: L'article %s a bien été généré !", issue.getTitle()));
     }
 
     private static void writeArticle(Commands commands, Path adventurePath, Path adventureFolder, Article article,
@@ -173,7 +175,43 @@ public class GenerateArticle {
                 newBranch,
                 "main",
                 commitMessage);
-        issue.comment(String.format("Article généré le %s dans content/adventures/%s.md", LocalDate.now(),
-                articlePath));
+        commands.echo(String.format("Pull Request #%d créée : %s", pullRequest.getNumber(), pullRequest.getHtmlUrl()));
+        
+        // Activer l'auto-merge sur la PR
+        try {
+            enableAutoMerge(pullRequest.getNodeId(), token);
+            commands.echo("Auto-merge activé sur la Pull Request");
+        } catch (Exception e) {
+            commands.warning("Impossible d'activer l'auto-merge : " + e.getMessage());
+            Log.warn("Auto-merge activation failed", e);
+        }
+        
+        issue.comment(String.format("Article généré le %s dans content/adventures/%s.md\nPull Request: %s", 
+                LocalDate.now(), articlePath, pullRequest.getHtmlUrl()));
+    }
+    
+    /**
+     * Active l'auto-merge sur une Pull Request via l'API GraphQL GitHub
+     */
+    private static void enableAutoMerge(String pullRequestNodeId, String token) throws Exception {
+        String graphqlQuery = String.format("""
+            {
+              "query": "mutation { enablePullRequestAutoMerge(input: { pullRequestId: \\"%s\\", mergeMethod: SQUASH }) { clientMutationId } }"
+            }
+            """, pullRequestNodeId);
+        
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.github.com/graphql"))
+                .header("Authorization", "Bearer " + token)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(graphqlQuery))
+                .build();
+        
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        
+        if (response.statusCode() != 200) {
+            throw new IOException("Failed to enable auto-merge: HTTP " + response.statusCode() + " - " + response.body());
+        }
     }
 }
