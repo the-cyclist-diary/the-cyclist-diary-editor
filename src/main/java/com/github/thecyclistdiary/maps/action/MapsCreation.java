@@ -37,7 +37,7 @@ public class MapsCreation {
                 .setDirectory(repoDirectory.toFile())
                 .setBranch(pullRequestPayload.getPullRequest().getHead().getRef())
                 .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()))
-                .setDepth(1)
+                .setDepth(2)
                 .setCloneAllBranches(false);
         try (Git git = cloneCommand.call()) {
             Repository repository = git.getRepository();
