@@ -108,7 +108,12 @@ public class MapsCreation {
                     throw new IOException("Interrupted while waiting before merge", e);
                 }
                 
-                pr.merge("Maps generated successfully", pr.getHead().getSha(), GHPullRequest.MergeMethod.SQUASH);
+                // Refresh PR one more time to get the updated HEAD SHA after our push
+                pr.refresh();
+                String currentHeadSha = pr.getHead().getSha();
+                Log.info("Current HEAD SHA before merge: %s".formatted(currentHeadSha));
+                
+                pr.merge("Maps generated successfully", currentHeadSha, GHPullRequest.MergeMethod.SQUASH);
                 commands.notice("Pull Request #%d merged successfully!".formatted(pr.getNumber()));
                 Log.info("PR #%d merged successfully".formatted(pr.getNumber()));
 
