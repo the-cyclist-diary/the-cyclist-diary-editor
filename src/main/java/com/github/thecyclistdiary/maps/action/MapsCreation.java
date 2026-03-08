@@ -98,6 +98,16 @@ public class MapsCreation {
                 if (!Boolean.TRUE.equals(mergeable)) {
                     throw new IOException("PR #%d is not mergeable after waiting (state: %s)".formatted(pr.getNumber(), mergeable));
                 }
+                
+                // Wait a bit more after mergeability is confirmed to ensure GitHub is ready
+                Log.info("PR is mergeable, waiting 10 seconds before merge to ensure GitHub is ready...");
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Interrupted while waiting before merge", e);
+                }
+                
                 pr.merge("Maps generated successfully", pr.getHead().getSha(), GHPullRequest.MergeMethod.SQUASH);
                 commands.notice("Pull Request #%d merged successfully!".formatted(pr.getNumber()));
                 Log.info("PR #%d merged successfully".formatted(pr.getNumber()));
