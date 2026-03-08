@@ -61,6 +61,10 @@ public class MapsCreation {
                 commands.notice("Changes committed and pushed to the repository.");
                 GHPullRequest pr = pullRequestPayload.getPullRequest();
                 try {
+                    Log.info("Updating PR #%d branch with base...".formatted(pr.getNumber()));
+                    pr.updateBranch();
+                    Log.info("PR #%d branch updated successfully".formatted(pr.getNumber()));
+                    
                     Log.info("Merging article PR #%d...".formatted(pr.getNumber()));
                     pr.merge("Maps generated successfully", pr.getHead().getSha(), GHPullRequest.MergeMethod.SQUASH);
                     commands.notice("Pull Request #%d merged successfully!".formatted(pr.getNumber()));
