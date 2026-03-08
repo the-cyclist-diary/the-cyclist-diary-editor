@@ -16,6 +16,12 @@ inputs:
   action:
     description: 'Name of the action (if named)'
     required: false
+  webp-server-url:
+    description: 'URL of the WebP conversion server'
+    required: true
+  webp-server-api-key:
+    description: 'API key for WebP server authentication'
+    required: true
 
 runs:
   using: 'docker'
