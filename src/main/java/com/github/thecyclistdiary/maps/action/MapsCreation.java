@@ -79,10 +79,25 @@ public class MapsCreation {
                 Log.info("Changes committed successfully");
                 commands.notice("Changes committed and pushed to the repository.");
 
-                // La branche est déjà à jour grâce au merge fait avant, on peut merger
-                // directement
                 Log.info("Merging PR #%d...".formatted(pr.getNumber()));
-                pr.refresh(); // Une seule refresh pour obtenir le dernier état après notre push
+                // After a push, GitHub needs time to recompute mergeability; poll until known
+                Boolean mergeable = null;
+                for (int attempt = 0; attempt < 10 && !Boolean.TRUE.equals(mergeable); attempt++) {
+                    if (attempt > 0) {
+                        try {
+                            Thread.sleep(3000);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new IOException("Interrupted while waiting for PR mergeability", e);
+                        }
+                    }
+                    pr.refresh();
+                    mergeable = pr.getMergeable();
+                    Log.info("PR #%d mergeable state: %s (attempt %d)".formatted(pr.getNumber(), mergeable, attempt + 1));
+                }
+                if (!Boolean.TRUE.equals(mergeable)) {
+                    throw new IOException("PR #%d is not mergeable after waiting (state: %s)".formatted(pr.getNumber(), mergeable));
+                }
                 pr.merge("Maps generated successfully", pr.getHead().getSha(), GHPullRequest.MergeMethod.SQUASH);
                 commands.notice("Pull Request #%d merged successfully!".formatted(pr.getNumber()));
                 Log.info("PR #%d merged successfully".formatted(pr.getNumber()));
