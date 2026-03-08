@@ -34,15 +34,32 @@ public class MapsCreation {
         boolean fullScan = Boolean.parseBoolean(inputs.get("full-scan").orElse("false"));
         Path repoDirectory = Files.createTempDirectory("git");
 
+        GHPullRequest pr = pullRequestPayload.getPullRequest();
         CloneCommand cloneCommand = Git.cloneRepository()
                 .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
                 .setDirectory(repoDirectory.toFile())
-                .setBranch(pullRequestPayload.getPullRequest().getHead().getRef())
+                .setBranch(pr.getHead().getRef())
                 .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()))
                 .setDepth(2)
                 .setCloneAllBranches(false);
         try (Git git = cloneCommand.call()) {
             Repository repository = git.getRepository();
+
+            // Fetch et merge la branche de base pour s'assurer qu'on est à jour
+            String baseBranch = pr.getBase().getRef();
+            Log.info("Fetching base branch %s...".formatted(baseBranch));
+            git.fetch()
+                    .setRemote("origin")
+                    .setRefSpecs(String.format("+refs/heads/%s:refs/remotes/origin/%s", baseBranch, baseBranch))
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
+                    .call();
+
+            Log.info("Merging base branch %s into current branch...".formatted(baseBranch));
+            git.merge()
+                    .include(repository.resolve(String.format("origin/%s", baseBranch)))
+                    .call();
+            Log.info("Base branch merged successfully");
+
             Set<String> modifiedGpxFiles = fullScan ? Set.of() : GitHelper.getModifiedGpxList(git, repository);
             GpxPolylineService polylineService = new GpxPolylineService();
             var gpxToMapWalker = new GitAwareGpxToMapWalker(modifiedGpxFiles, polylineService, fullScan);
@@ -61,20 +78,14 @@ public class MapsCreation {
                 commitChanges(git, username, token);
                 Log.info("Changes committed successfully");
                 commands.notice("Changes committed and pushed to the repository.");
-                GHPullRequest pr = pullRequestPayload.getPullRequest();
 
-                // Rafraîchir la PR pour obtenir le dernier SHA après notre push
-                Log.info("Refreshing PR #%d data...".formatted(pr.getNumber()));
-                pr.refresh();
-
-                Log.info("Updating PR #%d branch with base...".formatted(pr.getNumber()));
-                pr.updateBranch();
-                Log.info("PR #%d branch updated successfully".formatted(pr.getNumber()));
-
-                // Rafraîchir à nouveau après updateBranch
-                pr.refresh();
+                // La branche est déjà à jour grâce au merge fait avant, on peut merger
+                // directement
+                Log.info("Merging PR #%d...".formatted(pr.getNumber()));
+                pr.refresh(); // Une seule refresh pour obtenir le dernier état après notre push
                 pr.merge("Maps generated successfully", pr.getHead().getSha(), GHPullRequest.MergeMethod.SQUASH);
-                Log.info("PR #%d merged".formatted(pr.getNumber()));
+                commands.notice("Pull Request #%d merged successfully!".formatted(pr.getNumber()));
+                Log.info("PR #%d merged successfully".formatted(pr.getNumber()));
 
             } else {
                 commands.warning("No changes to commit, skipping git commit and push.");
