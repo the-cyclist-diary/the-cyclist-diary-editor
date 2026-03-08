@@ -36,7 +36,9 @@ public class MapsCreation {
                 .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
                 .setDirectory(repoDirectory.toFile())
                 .setBranch(pullRequestPayload.getPullRequest().getHead().getRef())
-                .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()));
+                .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()))
+                .setDepth(1)
+                .setCloneAllBranches(false);
         try (Git git = cloneCommand.call()) {
             Repository repository = git.getRepository();
             Set<String> modifiedGpxFiles = fullScan ? Set.of() : GitHelper.getModifiedGpxList(git, repository);

@@ -53,7 +53,9 @@ public class GenerateArticle {
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token))
                     .setDirectory(repoDirectory.toFile())
                     .setBranch(context.getGitHubRef())
-                    .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()));
+                    .setURI(String.format("%s/%s", context.getGitHubServerUrl(), context.getGitHubRepository()))
+                    .setDepth(1)
+                    .setCloneAllBranches(false);
             try (Git git = cloneCommand.call()) {
                 String adventureName = issue.getLabels().stream().findFirst()
                         .orElseThrow(NoLabelFoundException::new).getName();
